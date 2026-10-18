@@ -23,12 +23,8 @@ def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
-def scorecard(path, *, expected_case_ids=None, **options):
-    return Scorecard.build(
-        [ReportDocument.load(path, expected_case_ids=expected_case_ids)],
-        baseline="none",
-        **options,
-    )
+def scorecard(path, **options):
+    return Scorecard.build([ReportDocument.load(path)], baseline="none", **options)
 
 
 def _saved(tmp_path, document):
@@ -280,17 +276,51 @@ def test_direct_and_historical_declines_are_counted_without_rewriting_report(
     assert path.read_bytes() == original
 
 
-def test_summary_detects_duplicate_unexpected_and_mismatched_ids(tmp_path):
+def test_summary_detects_duplicate_and_unexpected_ids(tmp_path):
     document = _document()
     document["report"]["cases"].append(document["report"]["cases"][0])
     document["report"]["failures"].append({"name": "surprise"})
-    summary = scorecard(
-        _saved(tmp_path, document), expected_case_ids=["answer"]
-    ).to_json()
+    card = scorecard(_saved(tmp_path, document))
+    summary = card.to_json()
     assert summary["status"] == "incomplete"
     assert summary["integrity"]["duplicate_case_ids"] == ["answer"]
-    assert summary["integrity"]["selection_manifest_mismatch"]
-    assert "surprise" in summary["integrity"]["unexpected_case_ids"]
+    assert summary["integrity"]["unexpected_case_ids"] == ["surprise"]
+    assert summary["integrity"]["selection_manifest_mismatch"] is False
+    assert card.exit_code == 1
+
+
+def test_recorded_selection_that_disagrees_with_the_run_is_a_mismatch(tmp_path):
+    document = _document()
+    document["evaluation_run"]["status"] = "completed"
+    document["experiment_metadata"]["selection"]["case_ids"] = [
+        "answer",
+        "planned-only",
+    ]
+    card = scorecard(_saved(tmp_path, document))
+    summary = card.to_json()
+
+    assert summary["status"] == "incomplete"
+    assert summary["integrity"] == {
+        "unexpected_case_ids": ["framework_failure", "guidance_failure"],
+        "duplicate_case_ids": [],
+        "selection_manifest_mismatch": True,
+    }
+    assert summary["case_ids"] == ["answer", "planned-only"]
+    assert summary["unresolved_case_ids"] == ["planned-only"]
+    assert summary["counts"]["selected"] == 2
+    assert summary["counts"]["unresolved"] == 1
+    assert card.exit_code == 1
+
+
+def test_recorded_selection_that_matches_the_run_is_not_a_mismatch(tmp_path):
+    document = _document()
+    document["experiment_metadata"]["selection"]["case_ids"] = list(
+        document["evaluation_run"]["selected_case_ids"]
+    )
+    summary = scorecard(_saved(tmp_path, document)).to_json()
+
+    assert summary["integrity"]["selection_manifest_mismatch"] is False
+    assert summary["unresolved_case_ids"] == ["pending"]
 
 
 def test_unlabeled_and_historical_reports_are_explicit(tmp_path):

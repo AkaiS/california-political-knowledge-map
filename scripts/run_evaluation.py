@@ -148,14 +148,11 @@ def resolve_plan(
 
 
 def summarize_report(
-    path: Path,
-    *,
-    expected_ids: list[str] | None = None,
-    reviewer_port: int = DEFAULT_REVIEWER_PORT,
+    path: Path, *, reviewer_port: int = DEFAULT_REVIEWER_PORT
 ) -> Scorecard:
     """A planned run's single-axis Scorecard."""
     return Scorecard.build(
-        [ReportDocument.load(path, expected_case_ids=expected_ids)],
+        [ReportDocument.load(path)],
         baseline="none",
         reviewer_port=reviewer_port,
     )
@@ -208,11 +205,7 @@ def execute_plan(plan: dict[str, Any]) -> tuple[dict[str, Any] | None, int]:
         exit_code = 1
     if not written:
         return None, exit_code or 1
-    scorecard = summarize_report(
-        written[-1],
-        expected_ids=plan["selection"]["case_ids"],
-        reviewer_port=plan["reviewer_port"],
-    )
+    scorecard = summarize_report(written[-1], reviewer_port=plan["reviewer_port"])
     return scorecard.to_json(), exit_code or scorecard.exit_code
 
 

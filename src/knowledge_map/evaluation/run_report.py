@@ -40,25 +40,13 @@ class NoHeadline(BaseModel, frozen=True):
 class ReportDocument:
     """One saved Evaluation Report, in any historical shape."""
 
-    def __init__(
-        self,
-        path: Path,
-        content: dict[str, Any],
-        expected_case_ids: Sequence[str] | None = None,
-    ) -> None:
+    def __init__(self, path: Path, content: dict[str, Any]) -> None:
         self.path = path
         self.content = content
-        self.expected_case_ids = expected_case_ids
 
     @classmethod
-    def load(
-        cls, path: Path, *, expected_case_ids: Sequence[str] | None = None
-    ) -> ReportDocument:
-        """Read ``path``; raise when it is not a readable Evaluation Report.
-
-        ``expected_case_ids`` is the population a planned run selected, which
-        the report's own manifest must match.
-        """
+    def load(cls, path: Path) -> ReportDocument:
+        """Read ``path``; raise when it is not a readable Evaluation Report."""
 
         content = json.loads(Path(path).read_text())
         if (
@@ -67,7 +55,7 @@ class ReportDocument:
             or not isinstance(content.get("report"), dict)
         ):
             raise ValueError(f"{path} is not an Evaluation Report")  # noqa: TRY004 -- callers report unreadable files as one ValueError
-        return cls(Path(path), content, expected_case_ids)
+        return cls(Path(path), content)
 
 
 class Axis(BaseModel, frozen=True):
@@ -140,12 +128,7 @@ class Scorecard(BaseModel, frozen=True):
 
 def _axis(document: ReportDocument, reviewer_port: int) -> Axis:
     content = document.content
-    summary = _summary(
-        document.path,
-        content,
-        expected_ids=document.expected_case_ids,
-        reviewer_port=reviewer_port,
-    )
+    summary = _summary(document.path, content, reviewer_port=reviewer_port)
     version = summary["provenance"]["headline_version"]
     headline: Headline | NoHeadline
     if not version:
@@ -195,7 +178,6 @@ def _summary(
     path: Path,
     document: dict[str, Any],
     *,
-    expected_ids: Sequence[str] | None,
     reviewer_port: int,
 ) -> dict[str, Any]:
     """Keep missing measurements visible instead of shrinking their populations."""
@@ -205,6 +187,13 @@ def _summary(
     failures = report.get("failures", [])
     selected = run.get("selected_cases", [])
     recorded_ids = run.get("selected_case_ids")
+    experiment = (
+        document.get("experiment_metadata") or report.get("experiment_metadata") or {}
+    )
+    selection = experiment.get("selection", {})
+    # A planned run records the population it asked for; the report's own
+    # manifest and outcomes must match it.
+    expected_ids = selection.get("case_ids")
     selected_ids = list(expected_ids) if expected_ids is not None else recorded_ids
     if selected_ids is None:
         # Historical reports have no selection manifest; the reported cases
@@ -306,10 +295,6 @@ def _summary(
                 "inclusion_policy": "Existing RAG reviewer measurement rules; unweighted mean of recorded or exactly replayed case scores. Failures and unresolved measurements remain missing.",
                 "unavailable_reason": row["reason"] if row["value"] is None else None,
             }
-    experiment = (
-        document.get("experiment_metadata") or report.get("experiment_metadata") or {}
-    )
-    selection = experiment.get("selection", {})
     integrity_errors = {
         "unexpected_case_ids": extra,
         "duplicate_case_ids": duplicate,

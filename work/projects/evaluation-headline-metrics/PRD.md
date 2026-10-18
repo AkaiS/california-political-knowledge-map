@@ -210,7 +210,8 @@ class Scorecard(BaseModel):
     axes: tuple[Axis, ...]                                   # one per report, in argument order
     @classmethod
     def build(cls, documents: Sequence[ReportDocument],
-              baseline: Literal["auto", "none"] | Path) -> Scorecard
+              baseline: Literal["auto", "none"] | Path,
+              *, reviewer_port: int = 8766) -> Scorecard   # port in the reviewer link and command
     def to_json(self) -> dict
     def to_markdown(self) -> str
     exit_code: int                                           # property

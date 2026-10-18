@@ -19,7 +19,7 @@ Relevance, the only Gold Set, is the first task through them. See the
 
 **Blocked by:** None (can start immediately).
 
-Labels: ready-for-agent
+Labels: completed
 
 - [x] The evaluation task registry gains an optional `headline` field. When a
   task declares one, `ca-map eval run` passes its evaluator to the engine and
@@ -74,3 +74,10 @@ Labels: ready-for-agent
   takes an added `reviewer_port` keyword (the reviewer link). The PRD fixes
   `load(path)` and `build(documents, baseline)`. The maintainer decides
   whether to keep these options or move them.
+- 2026-10-18, resolution (maintainer approved): `ReportDocument.load(path)`
+  now matches the PRD. A report that records its selection
+  (`experiment_metadata.selection.case_ids`) is checked against its own
+  `evaluation_run.selected_case_ids` and outcomes on every load, so a
+  disagreement reads as `selection_manifest_mismatch` with a nonzero exit.
+  `Scorecard.build` keeps `reviewer_port`, and the PRD's Modules section now
+  lists it. Label set to `completed`.
