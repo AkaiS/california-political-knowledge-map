@@ -184,37 +184,35 @@ def test_native_invalid_reading_order_still_fails_without_output_retry(
 
 
 @pytest.mark.parametrize(
-    "target,expected_mode",
+    "target,strict",
     [
-        (deployment("google/gemini-3.1-flash-lite"), "tools"),
-        (deployment("openai/gpt-4o-mini"), "tools"),
+        (deployment("google/gemini-3.1-flash-lite"), True),
+        (deployment("openai/gpt-4o-mini"), True),
         (
             ModelDeployment(
                 kind=DeploymentKind.LOCAL,
                 model="gemma4:26b",
                 endpoint="http://local.invalid/v1",
             ),
-            "native",
+            False,
         ),
     ],
 )
-def test_other_and_local_assessment_modes_are_unchanged(
-    monkeypatch, target, expected_mode
-):
+def test_every_deployment_requests_native_assessment(monkeypatch, target, strict):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-native-assessment-key")
     requests = []
 
     def respond(request):
         body = json.loads(request.content)
         requests.append(body)
-        if expected_mode == "native":
+        if strict:
+            assert_strict_native(body)
+        else:
             assert body["response_format"]["type"] == "json_schema"
+            assert not body.get("tools")
             assert body["response_format"]["json_schema"]["schema"]["required"] == [
                 "status"
             ]
-        else:
-            assert body.get("response_format", {}).get("type") != "json_schema"
-            assert body.get("tools")
         return httpx.Response(200, json=completion(body, valid_assessment()))
 
     output, count = asyncio.run(
