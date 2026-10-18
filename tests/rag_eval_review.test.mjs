@@ -141,6 +141,45 @@ test('focused page loads specs, preserves independent judgments and disables abs
  assert.equal(get('position').textContent.includes('case-b'),true);
 });
 
+test('run metrics show the report headline table value, not a mean the reviewer recomputes',async()=>{
+ const {readFileSync,writeFileSync,mkdtempSync}=await import('node:fs');const {runInNewContext}=await import('node:vm');const {execFileSync}=await import('node:child_process');const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ // A completed run whose second case recorded a failure. Its zero recall is a
+ // case score, but the headline table leaves a failed case out of quality metrics.
+ const labels={grain:'article_chunk',relevant_ids:['a'],answers:[{groups:[{kind:'hop-0',ids:['a']}]}]};
+ const scored=value=>({fused_recall_at_10:{name:'fused_recall_at_10',value,reason:'1 reference ID'}});
+ const fixture={task:'retrieval',label_quality:'silver',data_set:'evals/silver/retrieval.yaml',ran_at:'2026-10-18',
+  experiment_metadata:{headline_version:'retrieval-v1'},
+  evaluation_run:{status:'completed',selected_count:2,terminal_count:2,failure_count:0,unresolved_case_ids:[],selected_cases:[{name:'found'},{name:'failed'}]},
+  retrieval_report:{metric_version:'unique-chunk-budget-v2',chunk_budget:50,configurations:[]},
+  report:{
+   cases:[
+    {name:'found',inputs:{question:'Who supports AB 1?'},expected_output:labels,scores:scored(1),output:{failure:null}},
+    {name:'failed',inputs:{question:'Who opposes AB 1?'},expected_output:labels,scores:scored(0),output:{failure:{stage:'startup',exception_type:'RuntimeError',diagnostic:'Unavailable'}}},
+   ],
+   analyses:[{type:'table',title:'Headline metrics',
+    columns:['metric','role','value','numerator','denominator','aggregation','scored_cases','selected_cases','unavailable_reason'],
+    rows:[['fused_recall_at_10','primary',1.0,1.0,1.0,'per_case_mean',1,2,null],['execution_failure_rate','headline',0.5,1.0,2.0,'rate',2,2,null]]}],
+  }};
+ const path=join(mkdtempSync(join(tmpdir(),'rag-headline-')),'report.json');writeFileSync(path,JSON.stringify(fixture));
+ // The reviewer's own projection, as its server serves it to the page.
+ const run=JSON.parse(execFileSync('python',['-c','import json,sys\nfrom knowledge_map.evaluation.rag_review import project_report\nprint(json.dumps(project_report(json.load(open(sys.argv[1])))))',path],{encoding:'utf8'}));
+ const elements=new Map(),requests=[];
+ function element(tag='div'){const el={tagName:tag.toUpperCase(),dataset:{},value:'',textContent:'',children:[],disabled:false,hidden:false,classList:{toggle(){},add(){}},append(child){this.children.push(child);},replaceChildren(...children){this.children=children;},remove(){},setAttribute(key,value){this[key]=value;}};Object.defineProperty(el,'id',{set(value){elements.set(value,el);},get(){return [...elements].find(([,node])=>node===el)?.[0];}});return el;}
+ function get(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);}
+ get('filter').value='all';get('branch').value='fused';
+ const document={body:get('body'),getElementById:get,createElement:element,activeElement:element('body'),addEventListener(){},querySelector:()=>get('main'),querySelectorAll:()=>[]};
+ const page=readFileSync(new URL('../scripts/rag_eval_review.html',import.meta.url),'utf8');const script=page.match(/<script type="module">([\s\S]*?)<\/script>/)[1].replace(/^import .*;$/gm,'');
+ const storage={get length(){return 0;},key:()=>null,getItem:()=>null,setItem(){},removeItem(){}};
+ runInNewContext(script,{createReviewEditor,axes:Object.keys(defaults).filter(k=>!k.endsWith('_note')),defaults,validateReview,requiredAxes,complete,diagnosis,document,location:{pathname:'/runs/retrieval--run'},window:{addEventListener(){}},URL,Blob,setTimeout,clearTimeout,localStorage:storage,fetch:url=>new Promise(resolve=>requests.push({url,resolve}))});
+ for(const r of requests)r.resolve({ok:true,json:async()=>r.url.endsWith('/report')?run:r.url.endsWith('/presentation')?{html:{}}:{}});
+ await new Promise(resolve=>setImmediate(resolve));
+ const [table]=get('run-metrics').children;
+ const recall=table.children.find(row=>row.children?.[0]?.textContent==='Recall@k');
+ const atTen=recall.children[3];
+ assert.equal(atTen.textContent,'1.000');
+ assert.equal(atTen.title,'1 scored cases; 2 candidate cases');
+});
+
 test('sidebar and article have separate scrolling and run metrics can collapse',async()=>{
  const {readFileSync}=await import('node:fs');
  const page=readFileSync(new URL('../scripts/rag_eval_review.html',import.meta.url),'utf8');

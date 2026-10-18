@@ -278,12 +278,7 @@ def _summary(
     if document["task"] in ("retrieval", "chat"):
         projection = project_report(document)
         for row in projection["metrics"]:
-            name = (
-                row["metric"]
-                if row["branch"] == "context"
-                else f"{row['branch']}_{row['metric']}"
-                + (f"_at_{row['k']}" if row["k"] is not None else "")
-            )
+            name = row["score"]
             existing = metrics.get(name, {})
             metrics[name] = {
                 **existing,

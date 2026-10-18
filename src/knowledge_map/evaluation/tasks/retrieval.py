@@ -26,12 +26,14 @@ from knowledge_map.schemas.retrieval import (
     FusedCandidate,
     NonemptyText,
     RetrievalAnswer,
+    RetrievalBranch,
     RetrievalRequest,
 )
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
+from ..headline import Aggregation, CaseMean, HeadlineDefinition, Role, Unavailable
 from ..retrieval_report import METRIC_VERSION
 from .chat import ChatFailure, capture_messages, chat_stage_observations
 from .registry import EvaluationTask, register
@@ -313,6 +315,55 @@ class RetrievedReferenceEvidence(Evaluator):
         return scores
 
 
+# A retrieval headline means what the case scores it averages mean, so each
+# retrieval metric version names its own headline version.  A new metric
+# version fails here until a headline version is added for it.
+HEADLINE_VERSIONS = {"unique-chunk-budget-v2": "retrieval-v1"}
+
+# Each question is one information need, so every row is a per-question mean.
+RETRIEVAL_HEADLINE = HeadlineDefinition(
+    version=HEADLINE_VERSIONS[METRIC_VERSION],
+    measures=(
+        CaseMean(score="fused_recall_at_10", role=Role.PRIMARY),
+        CaseMean(score="fused_recall_at_5", role=Role.HEADLINE),
+        CaseMean(score="fused_reciprocal_rank", role=Role.HEADLINE),
+        CaseMean(score="fused_complete_evidence_at_10", role=Role.HEADLINE),
+        CaseMean(score="context_recall", role=Role.HEADLINE),
+        CaseMean(score="context_complete_evidence", role=Role.HEADLINE),
+        # A branch the question did not ask for records no completion.
+        *(
+            CaseMean(score=f"{branch.value}_completed", role=Role.HEADLINE)
+            for branch in RetrievalBranch
+        ),
+        *(
+            CaseMean(score=f"{branch.value}_{name}", role=Role.DIAGNOSTIC)
+            for branch in RetrievalBranch
+            for name in (
+                "recall_at_1",
+                "recall_at_5",
+                "recall_at_10",
+                "recall_at_50",
+                "reciprocal_rank",
+                "complete_evidence_at_5",
+                "complete_evidence_at_10",
+            )
+        ),
+        # Unlisted chunks may be relevant against provisional labels, so
+        # reference precision stays diagnostic.
+        *(
+            CaseMean(score=f"{ranking}_precision_at_{k}", role=Role.DIAGNOSTIC)
+            for ranking in ("fused", *(branch.value for branch in RetrievalBranch))
+            for k in RetrievedReferenceEvidence.ks
+        ),
+        Unavailable(
+            metric="fused_ndcg_at_10",
+            aggregation=Aggregation.PER_CASE_MEAN,
+            role=Role.DIAGNOSTIC,
+            reason="the retrieval references have no relevance grades",
+        ),
+    ),
+)
+
 RETRIEVAL_TASK = register(
     EvaluationTask(
         name="retrieval",
@@ -325,5 +376,6 @@ RETRIEVAL_TASK = register(
         case_lifecycle=RetrievalCaseLifecycle,
         default_model=default_model(),
         prompts=lambda: {**JEV_PROMPTS, "chat_agent": CHAT_INSTRUCTIONS},
+        headline=RETRIEVAL_HEADLINE,
     )
 )
