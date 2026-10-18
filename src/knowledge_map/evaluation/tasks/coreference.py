@@ -232,11 +232,11 @@ class FoundTheSilverMentionSpans(Evaluator):
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
         return detection_scores(
-            _locations(ctx.expected_output), _locations(ctx.output), "span"
+            _mention_spans(ctx.expected_output), _mention_spans(ctx.output), "span"
         )
 
 
-def _locations(
+def _mention_spans(
     answer: CoreferenceExpectation | CoreferenceOutput,
 ) -> set[MentionSpanIdentity]:
     return set(entity_by_identity(answer.mention_spans))
@@ -251,23 +251,21 @@ class AgreedOnTheCanonicalEntity(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        agreement = entity_agreement(ctx.expected_output, ctx.output)
+        agreement = _entity_agreement(ctx)
         if agreement is None:
             return UNSCORED
         agreed, shared = agreement
         return {"entity_accuracy": agreed / shared}
 
 
-def entity_agreement(
-    expected: CoreferenceExpectation, found: CoreferenceOutput
-) -> tuple[int, int] | None:
+def _entity_agreement(case: EvaluatorContext | ReportCase) -> tuple[int, int] | None:
     """Mentions both sides found that carry the same entity name, of all shared.
 
     ``None`` when the two share no location, so there is nothing to agree on.
     """
 
-    expected_entities = entity_by_identity(expected.mention_spans)
-    found_entities = entity_by_identity(found.mention_spans)
+    expected_entities = entity_by_identity(case.expected_output.mention_spans)
+    found_entities = entity_by_identity(case.output.mention_spans)
     shared = expected_entities.keys() & found_entities.keys()
     if not shared:
         return None
@@ -285,7 +283,7 @@ class MatchedTheSilverClustering(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        counts = cluster_counts(ctx.expected_output, ctx.output)
+        counts = _cluster_counts(ctx)
         if not counts.precision_denominator:
             return UNSCORED
         precision = counts.precision_numerator / counts.precision_denominator
@@ -297,9 +295,7 @@ class MatchedTheSilverClustering(Evaluator):
         }
 
 
-def cluster_counts(
-    expected: CoreferenceExpectation, found: CoreferenceOutput
-) -> Counts:
+def _cluster_counts(case: EvaluatorContext | ReportCase) -> Counts:
     """B-cubed credit over the locations both sides found.
 
     Each shared mention earns precision credit for the share of its found
@@ -308,8 +304,8 @@ def cluster_counts(
     over the shared mentions.  No shared location contributes zero.
     """
 
-    expected_entities = entity_by_identity(expected.mention_spans)
-    found_entities = entity_by_identity(found.mention_spans)
+    expected_entities = entity_by_identity(case.expected_output.mention_spans)
+    found_entities = entity_by_identity(case.output.mention_spans)
     shared = sorted(
         expected_entities.keys() & found_entities.keys(),
         key=lambda key: (key.sentence_label, key.mention_text, key.occurrence),
@@ -370,26 +366,32 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        decisions = critic_decisions(ctx.expected_output, ctx.output)
+        decisions = _critic_decisions(ctx)
         return {
             name: numerator / denominator
             for name, (numerator, denominator) in decisions.items()
         } or UNSCORED
 
 
-def critic_decisions(
-    expected: CoreferenceExpectation, found: CoreferenceOutput
+_REJECTION_PRECISION = "critic_rejection_precision"
+_REJECTION_RECALL = "critic_rejection_recall"
+_KEPT_CORRECT_SPANS = "critic_kept_correct_spans"
+CRITIC_SCORES = (_REJECTION_PRECISION, _REJECTION_RECALL, _KEPT_CORRECT_SPANS)
+
+
+def _critic_decisions(
+    case: EvaluatorContext | ReportCase,
 ) -> dict[str, tuple[int, int]]:
     """Each Critic score's numerator and denominator over the judged decisions.
 
     A score is absent when the case had no decision it could be judged on.
     """
 
-    silver = entity_by_identity(expected.mention_spans)
+    silver = entity_by_identity(case.expected_output.mention_spans)
 
     # (the span was correct, the Critic rejected it)
     judged: list[tuple[bool, bool]] = []
-    for outcome in found.outcomes:
+    for outcome in case.output.outcomes:
         if outcome.stage != "critic":
             continue
         expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
@@ -410,18 +412,18 @@ def critic_decisions(
     fractions: dict[str, tuple[int, int]] = {}
     if rejected:
         # Of what it threw away, how much deserved it.
-        fractions["critic_rejection_precision"] = (
+        fractions[_REJECTION_PRECISION] = (
             sum(not correct for correct in rejected),
             len(rejected),
         )
     if wrong:
         # Of the mistakes it was shown, how many it caught.
-        fractions["critic_rejection_recall"] = (sum(wrong), len(wrong))
+        fractions[_REJECTION_RECALL] = (sum(wrong), len(wrong))
     if right:
         # Of the correct spans it was shown, how many it left alone.
         # The complement of a false-rejection rate, so that higher is
         # better here as everywhere else in the report.
-        fractions["critic_kept_correct_spans"] = (
+        fractions[_KEPT_CORRECT_SPANS] = (
             sum(not was_rejected for was_rejected in right),
             len(right),
         )
@@ -429,29 +431,20 @@ def critic_decisions(
 
 
 def _span_counts(case: ReportCase) -> Counts:
-    return detection_counts(_locations(case.expected_output), _locations(case.output))
-
-
-def _cluster_counts(case: ReportCase) -> Counts:
-    return cluster_counts(case.expected_output, case.output)
-
-
-def _entity_agreement(case: ReportCase) -> tuple[int, int] | None:
-    return entity_agreement(case.expected_output, case.output)
+    return detection_counts(
+        _mention_spans(case.expected_output), _mention_spans(case.output)
+    )
 
 
 def _critic_decision(name: str) -> Callable[[ReportCase], tuple[int, int] | None]:
     def contribution(case: ReportCase) -> tuple[int, int] | None:
-        return critic_decisions(case.expected_output, case.output).get(name)
+        return _critic_decisions(case).get(name)
 
     return contribution
 
 
 #: Agreement is recorded the same way for the annotator alone and for the
-#: whole loop, so the two reports subtract.  B³ and canonical-entity accuracy
-#: pool over every mention both sides found, so each mention weighs the same;
-#: the per-case mean of span F1 sits beside the pooled one so a Story weighs
-#: once.
+#: whole loop, so the two reports subtract.
 AGREEMENT_MEASURES: tuple[Measure, ...] = (
     SetAgreement(
         prefix="span",
@@ -471,12 +464,6 @@ AGREEMENT_MEASURES: tuple[Measure, ...] = (
         metric="entity_accuracy", contribution=_entity_agreement, role=Role.HEADLINE
     ),
     CaseMean(score="span_f1", role=Role.HEADLINE),
-)
-
-CRITIC_SCORES = (
-    "critic_rejection_precision",
-    "critic_rejection_recall",
-    "critic_kept_correct_spans",
 )
 
 #: The Critic rows pool every judged decision across cases.

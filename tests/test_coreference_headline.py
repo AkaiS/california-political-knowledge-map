@@ -75,9 +75,10 @@ SHE = span("2", "she", "Toni Atkins")
 GOVERNOR = span("3", "the governor", "Gavin Newsom")
 IT = span("4", "it", "SB 1")
 THEY = span("5", "they", "Senate")
+MERGED_SILVER = silver(HE, SHE, GOVERNOR, IT)
 MERGED = (
     "merged",
-    silver(HE, SHE, GOVERNOR, IT),
+    MERGED_SILVER,
     resolved(
         [HE, span("2", "she", "Gavin Newsom"), GOVERNOR, THEY],
         [
@@ -299,11 +300,11 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
             MERGED,
             SPLIT,
             NOTHING_SHARED,
-            ("raised", MERGED[1], RuntimeError("transport exhausted")),
+            ("raised", MERGED_SILVER, RuntimeError("transport exhausted")),
             # A run the Critic emptied keeps its rejections in its output.
             (
                 "recorded",
-                MERGED[1],
+                MERGED_SILVER,
                 CoreferenceOutput(
                     outcomes=[critic("rejected", HE), critic("rejected", SHE)],
                     failure_type="zero_survivors",
@@ -332,6 +333,46 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     assert [[*row[:7], 5, row[8]] for row in clean] == rows
 
 
+# A Story silver found nothing to resolve in.  Both tasks record an empty
+# answer as the "no_mentions_returned" failure.
+NOTHING_TO_RESOLVE = (
+    "nothing-to-resolve",
+    silver(),
+    CoreferenceOutput(failure_type="no_mentions_returned"),
+)
+
+
+@pytest.mark.parametrize("task_name", TASKS)
+def test_a_story_both_sides_left_empty_counts_only_as_an_execution_failure(
+    tmp_path, task_name
+):
+    clean = headline_table(
+        saved_run(tmp_path / "clean", task_name, [MERGED, SPLIT, NOTHING_SHARED])
+    )
+    rows = headline_table(
+        saved_run(
+            tmp_path / "with-empty",
+            task_name,
+            [MERGED, SPLIT, NOTHING_SHARED, NOTHING_TO_RESOLVE],
+        )
+    )
+
+    assert rows.pop(8) == [
+        "execution_failure_rate",
+        "headline",
+        1 / 4,
+        1.0,
+        4.0,
+        "rate",
+        4,
+        4,
+        None,
+    ]
+    del clean[8]
+    # It adds nothing to any pooled count and stays out of the per-case mean.
+    assert [[*row[:7], 4, row[8]] for row in clean] == rows
+
+
 @pytest.mark.parametrize(
     ("task_name", "version"),
     [
@@ -342,7 +383,7 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
 def test_unreadable_output_records_evaluator_errors_the_same_way_on_every_run(
     tmp_path, task_name, version
 ):
-    cases = [MERGED, SPLIT, ("unreadable", MERGED[1], None)]
+    cases = [MERGED, SPLIT, ("unreadable", MERGED_SILVER, None)]
     first = saved_run(tmp_path / "first", task_name, cases)
     second = saved_run(tmp_path / "second", task_name, cases)
 
