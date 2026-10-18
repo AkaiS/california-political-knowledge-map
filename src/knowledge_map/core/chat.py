@@ -14,9 +14,15 @@ from uuid import uuid4
 
 import logfire
 from pydantic import ValidationError
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, NativeOutput, capture_run_messages
 from pydantic_ai.capabilities import AbstractCapability
-from pydantic_ai.messages import ModelRequest, UserPromptPart
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ModelResponse,
+    UserPromptPart,
+)
 from pydantic_ai.usage import RunUsage
 
 from knowledge_map.chat_telemetry import ChatSessionSettings
@@ -74,6 +80,25 @@ def _guidance_failure_kind(error: Exception) -> str:
     if isinstance(error, ValidationError):
         return "validation"
     return model_failure_kind(error)
+
+
+def _rejected_output_attributes(
+    error: BaseException, messages: Sequence[ModelMessage]
+) -> dict[str, object]:
+    """Show the model output the Chat Agent rejected and why.
+
+    Pydantic AI content capture is off, so without this a guidance failure only
+    says the output was unusable, not what the model actually sent.
+    """
+    attributes: dict[str, object] = {}
+    responses = [message for message in messages if isinstance(message, ModelResponse)]
+    if responses:
+        attributes["model_response"] = ModelMessagesTypeAdapter.dump_python(
+            [responses[-1]], mode="json"
+        )[0]
+    if error.__cause__ is not None:
+        attributes["output_error"] = str(error.__cause__)
+    return attributes
 
 
 class RetrievalGuidance(RetrievalValue):
@@ -236,19 +261,22 @@ async def generate_retrieval_answer(
         audit_schema_version=1,
     ) as span:
         try:
-            result = await agent.run(
-                render_evidence_context(package),
-                message_history=[
-                    ModelRequest(
-                        parts=[
-                            UserPromptPart(json.dumps(_date_context(resolved_as_of)))
-                        ]
-                    ),
-                    ModelRequest(parts=[UserPromptPart(original_question)]),
-                ],
-                output_type=RetrievalGuidance,
-                usage=usage,
-            )
+            with capture_run_messages() as messages:
+                result = await agent.run(
+                    render_evidence_context(package),
+                    message_history=[
+                        ModelRequest(
+                            parts=[
+                                UserPromptPart(
+                                    json.dumps(_date_context(resolved_as_of))
+                                )
+                            ]
+                        ),
+                        ModelRequest(parts=[UserPromptPart(original_question)]),
+                    ],
+                    output_type=RetrievalGuidance,
+                    usage=usage,
+                )
             guidance = _publication_bounded_guidance(result.output, package)
             disclosures = list(package.failure_disclosures)
             structural_empty = package.execution.structural_empty_disclosure
@@ -269,13 +297,16 @@ async def generate_retrieval_answer(
                 unmatched_requests=result.output.unmatched_requests,
             )
         except Exception as error:
+            failure_kind = _guidance_failure_kind(error)
             span.set_attributes(
                 {
                     "status": "failed",
-                    "failure_kind": _guidance_failure_kind(error),
+                    "failure_kind": failure_kind,
                     "diagnostic": "The Chat Agent could not prepare retrieval guidance.",
                 }
             )
+            if failure_kind == "model_output":
+                span.set_attributes(_rejected_output_attributes(error, messages))
             raise
         span.set_attribute("status", "succeeded")
         return answer
