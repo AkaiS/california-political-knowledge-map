@@ -215,9 +215,7 @@ def test_local_gemma_keeps_inlined_definitions_and_real_null_dates():
 
 
 @pytest.mark.parametrize("invalid", ["", "null"])
-def test_bad_date_strings_still_fail_assessment_without_output_retry(
-    monkeypatch, invalid
-):
+def test_bad_date_strings_fail_assessment_after_one_output_retry(monkeypatch, invalid):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-output-test-key")
     requests = []
 
@@ -240,4 +238,4 @@ def test_bad_date_strings_still_fail_assessment_without_output_retry(
         UnexpectedModelBehavior, match="Exceeded maximum output retries"
     ):
         asyncio.run(assess("google/gemma-4-26b-a4b-it", httpx.MockTransport(respond)))
-    assert len(requests) == 1
+    assert len(requests) == 2

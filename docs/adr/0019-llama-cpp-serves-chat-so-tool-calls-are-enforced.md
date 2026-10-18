@@ -7,9 +7,9 @@ local too, on their own llama.cpp server. The chat weights are served from
 `gemma-4-26B_q4_0-it.gguf` from
 `google/gemma-4-26B-A4B-it-qat-q4_0-gguf`, cached outside the repository.
 
-This record covers only the local Model Deployment. OpenRouter is a separate chat Model Deployment;
-the local llama.cpp enforcement described here does not apply to it. Its structured output is
-covered by "Amendment: OpenRouter uses strict native output" below.
+This record covers only the local Model Deployment. OpenRouter is a separate chat Model Deployment
+and uses its provider's structured-output behavior; the local llama.cpp enforcement described here
+does not apply to it.
 
 pydantic-ai's default output mode synthesises a `final_result` tool and sends
 `tool_choice: "required"`. On llama.cpp that is binding — the tool's JSON schema
@@ -191,40 +191,6 @@ correction exhaustion is a model-output validation failure, separate from
 request-schema conversion. The annotation can be removed when the upstream
 inliner handles `propertyNames`, provided the wire-schema regression still
 passes.
-
-## Amendment: OpenRouter uses strict native output
-
-On October 17, 2026, three of four Chat Sessions on the OpenRouter Model
-Deployment (`google/gemma-4-26b-a4b-it` via `deepinfra/fp8`) failed at Chat
-Session guidance. Output mode had been decided in two places: the local
-profile above defaulted to native, while OpenRouter relied on per-call
-`NativeOutput` wrappers. Chat Session guidance overrides `output_type` at run
-time, which dropped the wrapper, so the request fell back to an output tool.
-A hosted model may decline an optional tool and reply in prose. With
-`retries=0`, that prose was a terminal `model_output` failure.
-
-The model factory now owns the rule for every OpenRouter model, as the local
-profile does for local ones. `_build_openrouter_model` passes a partial
-profile that Pydantic AI merges over the inferred OpenRouter profile. It sets
-`default_structured_output_mode="native"` and `supports_json_schema_output`,
-and uses a schema transformer that defaults to strict. Every structured
-output then travels as `response_format: json_schema` with `strict: true`, and
-no call site picks an output mode.
-
-Consequences:
-
-- `OpenRouterProviderPolicy` always sends `require_parameters=True`, so
-  routing to a provider without JSON Schema support fails rather than
-  silently dropping the constraint. Such providers are ruled out.
-- Strict mode removes constraints the provider cannot enforce, such as
-  `minLength`, `minItems` and `format`, and moves them into field
-  descriptions. Pydantic still validates them, so a reply that breaks one is
-  still a `model_output` failure.
-- Strict mode forces `additionalProperties: false`, so a free-form `dict`
-  output field can only come back empty from an OpenRouter model.
-- The `chat_session.guidance` span records the rejected `model_response` and
-  its `output_error` on a `model_output` failure, because content capture is
-  off and the failure kind alone does not show what the model sent.
 
 ## Embeddings remain local
 

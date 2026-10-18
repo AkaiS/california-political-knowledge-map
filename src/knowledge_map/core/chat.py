@@ -324,7 +324,7 @@ def get_chat_agent(
             get_chat_model(deployment or DEFAULT_LOCAL_CHAT_MODEL, cache=cache_model),
             name="chat_agent",
             output_type=QuestionAssessment,
-            retries=0,
+            retries={"tools": 0, "output": 1},
             instructions=CHAT_INSTRUCTIONS,
             capabilities=capabilities,
         ),

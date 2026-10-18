@@ -162,7 +162,7 @@ def test_actual_gemma_session_assessment_requests_strict_native_schema(
 
 
 @pytest.mark.parametrize("invalid", ["null", None, "invalid-order"])
-def test_native_invalid_reading_order_still_fails_without_output_retry(
+def test_native_invalid_reading_order_fails_after_one_output_retry(
     monkeypatch, invalid
 ):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-native-assessment-key")
@@ -180,7 +180,26 @@ def test_native_invalid_reading_order_still_fails_without_output_retry(
         UnexpectedModelBehavior, match="Exceeded maximum output retries"
     ):
         asyncio.run(assess(deployment(), QUESTIONS[1], httpx.MockTransport(respond)))
-    assert len(requests) == 1
+    assert len(requests) == 2
+
+
+def test_one_rejected_assessment_is_retried_once(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "unused-native-assessment-key")
+    requests = []
+
+    def respond(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        output = valid_assessment()
+        if len(requests) == 1:
+            output = {**output, "reading_order": "invalid-order"}
+        return httpx.Response(200, json=completion(body, output))
+
+    output, count = asyncio.run(
+        assess(deployment(), QUESTIONS[1], httpx.MockTransport(respond))
+    )
+    assert output.status == "allowed"
+    assert count == len(requests) == 2
 
 
 @pytest.mark.parametrize(
