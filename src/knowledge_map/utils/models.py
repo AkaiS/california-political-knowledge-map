@@ -446,10 +446,9 @@ class _StrictDefaultOpenAIJsonSchemaTransformer(OpenAIJsonSchemaTransformer):
         super().__init__(schema, strict=True if strict is None else strict)
 
 
-# Every OpenRouter model answers through ``response_format: json_schema``.
-# An output tool is optional for the model to call, so hosted models could
-# reply in prose; ``require_parameters`` makes routing to a provider without
-# JSON Schema support fail instead of silently losing the constraint.
+# A hosted model may decline an optional output tool and reply in prose.
+# Native JSON Schema output leaves it no such choice, whatever output type a
+# call site passes.
 _OPENROUTER_STRUCTURED_OUTPUT_PROFILE = OpenAIModelProfile(
     json_schema_transformer=_StrictDefaultOpenAIJsonSchemaTransformer,
     default_structured_output_mode="native",
