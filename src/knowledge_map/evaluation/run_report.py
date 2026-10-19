@@ -19,7 +19,7 @@ from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from .headline import Aggregation, Headline, is_failed_outcome
+from .headline import Aggregation, Headline, HeadlineRow, Role, is_failed_outcome
 from .rag_review import project_report
 
 BRANCHES = ("full_text", "dense", "structural")
@@ -58,12 +58,110 @@ class ReportDocument:
         return cls(Path(path), content)
 
 
+class Change(BaseModel, frozen=True):
+    """One primary or headline row against the same row of the baseline."""
+
+    metric: str
+    aggregation: Aggregation
+    value: float | None
+    baseline_value: float | None
+    change: float | None
+
+
+class Comparison(BaseModel, frozen=True):
+    """A report against its baseline: what failed, what caveats, what changed."""
+
+    baseline: str | None = None
+    status: Literal[
+        "not_requested", "comparable", "comparable_with_caveat", "not_comparable"
+    ] = "not_requested"
+    failed_conditions: tuple[str, ...] = ()
+    dirty_worktree: tuple[Literal["current", "baseline"], ...] = ()
+    changes: tuple[Change, ...] = ()
+
+    @classmethod
+    def between(cls, current: Axis, baseline: Axis, baseline_path: Path) -> Comparison:
+        """Check every Comparable Run condition; state changes only when all hold."""
+
+        mine, theirs = current.summary, baseline.summary
+        failed = [
+            condition
+            for condition, holds in (
+                ("task", mine["task"] == theirs["task"]),
+                (
+                    "data_set_revision",
+                    mine["provenance"]["data_set_sha256"] is not None
+                    and mine["provenance"]["data_set_sha256"]
+                    == theirs["provenance"]["data_set_sha256"],
+                ),
+                ("selected_case_ids", set(mine["case_ids"]) == set(theirs["case_ids"])),
+                (
+                    "headline_version",
+                    current.headline_version is not None
+                    and current.headline_version == baseline.headline_version,
+                ),
+                (
+                    "completed_baseline_with_headline_table",
+                    isinstance(baseline.headline, Headline),
+                ),
+                (
+                    "selection_manifest_on_both_sides",
+                    current.has_selection_manifest and baseline.has_selection_manifest,
+                ),
+            )
+            if not holds
+        ]
+        # A dirty worktree leaves the measurement fixed but the system under
+        # test unrecorded, so it qualifies a comparison and never blocks it.
+        dirty = tuple(
+            side
+            for side, axis in (("current", current), ("baseline", baseline))
+            if axis.summary["provenance"]["dirty"] is True
+        )
+        if failed:
+            status = "not_comparable"
+        elif dirty:
+            status = "comparable_with_caveat"
+        else:
+            status = "comparable"
+        changes: tuple[Change, ...] = ()
+        if not failed and isinstance(current.headline, Headline):
+            changes = tuple(
+                _change(row, baseline.headline)
+                for row in current.headline.rows
+                if row.role in (Role.PRIMARY, Role.HEADLINE)
+            )
+        return cls(
+            baseline=str(baseline_path.resolve()),
+            status=status,
+            failed_conditions=tuple(failed),
+            dirty_worktree=dirty,
+            changes=changes,
+        )
+
+
+def _change(row: HeadlineRow, baseline: Headline) -> Change:
+    match = baseline.row(row.metric, row.aggregation)
+    baseline_value = None if match is None else match.value
+    return Change(
+        metric=row.metric,
+        aggregation=row.aggregation,
+        value=row.value,
+        baseline_value=baseline_value,
+        change=None
+        if row.value is None or baseline_value is None
+        else row.value - baseline_value,
+    )
+
+
 class Axis(BaseModel, frozen=True):
     """One report's result: its headline or why it has none, and its summary."""
 
     headline_version: str | None
     headline: Headline | NoHeadline
     summary: dict[str, Any]
+    has_selection_manifest: bool
+    comparison: Comparison = Comparison()
 
     @property
     def failed(self) -> bool:
@@ -89,7 +187,7 @@ class Axis(BaseModel, frozen=True):
                 if isinstance(headline, NoHeadline)
                 else [row.model_dump(mode="json") for row in headline.rows],
             },
-            "comparison": {"baseline": None, "status": "not_requested"},
+            "comparison": self.comparison.model_dump(mode="json"),
         }
 
 
@@ -102,15 +200,26 @@ class Scorecard(BaseModel, frozen=True):
     def build(
         cls,
         documents: Sequence[ReportDocument],
-        baseline: Literal["none"],
+        baseline: Literal["auto", "none"] | Path,
         *,
         reviewer_port: int = DEFAULT_REVIEWER_PORT,
     ) -> Scorecard:
-        if baseline != "none":
-            raise ValueError(f"unsupported baseline {baseline!r}")
         if not 1 <= reviewer_port <= 65535:
             raise ValueError("Reviewer port must be between 1 and 65535")
-        return cls(axes=tuple(_axis(document, reviewer_port) for document in documents))
+        if baseline == "auto":
+            raise NotImplementedError("automatic baseline selection")
+        axes = tuple(_axis(document, reviewer_port) for document in documents)
+        if isinstance(baseline, Path):
+            against = _axis(ReportDocument.load(baseline), reviewer_port)
+            axes = tuple(
+                axis.model_copy(
+                    update={"comparison": Comparison.between(axis, against, baseline)}
+                )
+                for axis in axes
+            )
+        elif baseline != "none":
+            raise ValueError(f"unsupported baseline {baseline!r}")
+        return cls(axes=axes)
 
     def to_json(self) -> dict[str, Any]:
         """The one axis's summary, or every axis's in argument order."""
@@ -145,7 +254,16 @@ def _axis(document: ReportDocument, reviewer_port: int) -> Axis:
         headline, "completed_answer_rate"
     )
     summary["counts"]["declined"] = _recorded_count(headline, "declined_rate")
-    return Axis(headline_version=version, headline=headline, summary=summary)
+    return Axis(
+        headline_version=version,
+        headline=headline,
+        summary=summary,
+        # The report checkpoint records the selected case IDs before any case
+        # runs; a report without them can't be shown to match another.
+        has_selection_manifest=isinstance(
+            content.get("evaluation_run", {}).get("selected_case_ids"), list
+        ),
+    )
 
 
 def _recorded_count(headline: Headline | NoHeadline, metric: str) -> int | None:
