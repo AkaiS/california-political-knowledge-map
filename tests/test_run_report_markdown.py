@@ -250,6 +250,35 @@ def test_diagnostic_rows_render_in_a_collapsed_section_after_the_scorecard(tmp_p
     )
 
 
+def test_an_axis_without_a_headline_gives_its_reason_in_the_summary_row(tmp_path):
+    complete = pinned(run_relevance(tmp_path / "complete", CONFUSION_CASES))
+    interrupted = pinned(
+        run_relevance(
+            tmp_path / "interrupted",
+            [
+                ("first", RELEVANT, RELEVANT),
+                ("interrupted", RELEVANT, KeyboardInterrupt("operator")),
+            ],
+        )
+    )
+
+    card = Scorecard.build(
+        [ReportDocument.load(path) for path in (complete, interrupted)],
+        baseline="none",
+    )
+
+    assert card.exit_code == 1
+    assert card.to_markdown().split("\n\n", 1)[0] == (
+        "| axis | label quality | primary metric | value | change | scored / "
+        "selected | failure rate | comparison status |\n"
+        "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+        "| relevance | gold | relevant_f1 | 0.667 (4/6) | - | 5/5 | 0.000 (0/5) "
+        "| not requested |\n"
+        "| relevance | gold | - | no Headline Metrics (incomplete_run) | - | 1/2 "
+        "| - | not requested |"
+    )
+
+
 def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
     baseline = pinned(
         run_relevance(tmp_path / "relevance", CONFUSION_CASES),
@@ -282,8 +311,8 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
         "| relevance | gold | relevant_f1 | 0.000 (0/3) | -0.667 | 5/5 | 0.000 "
         "(0/5) | comparable |\n"
-        "| chat | unlabeled | answer_quality | unavailable (Unlabeled Set: no "
-        "quality metric) | - | 0/3 | 0.333 (1/3) | no earlier run |\n"
+        "| chat | unlabeled | answer_quality | no quality metric | - | 0/3 "
+        "| 0.333 (1/3) | no earlier run |\n"
         "| extraction | silver | node_f1 | unavailable (no case contributed to "
         "the denominator) | - | 1/1 | 0.000 (0/1) | no earlier run |\n"
         "\n"

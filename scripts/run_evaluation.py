@@ -13,7 +13,7 @@ import hashlib
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -168,7 +168,12 @@ def _baseline(value: str) -> Baseline:
     return value if value in ("auto", "none") else Path(value)
 
 
-def _print(scorecard: Scorecard, output_format: str, *, key: str | None = None) -> None:
+def _print(
+    scorecard: Scorecard,
+    output_format: Literal["json", "markdown"],
+    *,
+    key: str | None = None,
+) -> None:
     if output_format == "markdown":
         print(scorecard.to_markdown(), end="", flush=True)
         return

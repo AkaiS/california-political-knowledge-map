@@ -13,12 +13,12 @@ headline, the registry's `headline` field becomes required.
 - 06, Record chat operational Headline Metrics;
 - 07, Compare against the latest Comparable Run.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The summary script accepts `--format markdown`, with JSON as the
+- [x] The summary script accepts `--format markdown`, with JSON as the
   default, and repeated `--report`. It prints `to_markdown()` or `to_json()`,
   and its exit code is `Scorecard.exit_code` in both formats.
-- [ ] A one-axis scorecard renders, in order:
+- [x] A one-axis scorecard renders, in order:
   - the heading;
   - the population line;
   - the baseline line;
@@ -27,26 +27,26 @@ Labels: ready-for-agent
   - the provenance line.
 
   Diagnostic rows render in a collapsed section.
-- [ ] A multi-axis scorecard renders the per-axis summary table first, then
+- [x] A multi-axis scorecard renders the per-axis summary table first, then
   each one-axis scorecard in argument order. An Unlabeled axis shows "no
   quality metric".
-- [ ] A report without a headline renders its population block and its
+- [x] A report without a headline renders its population block and its
   `NoHeadline` reason.
-- [ ] The registry's `headline` field becomes required. Every registered task
+- [x] The registry's `headline` field becomes required. Every registered task
   declares one.
-- [ ] Snapshot tests of `Scorecard.to_markdown` cover one axis, three axes
+- [x] Snapshot tests of `Scorecard.to_markdown` cover one axis, three axes
   including chat, and a report without a headline.
-- [ ] The summary script's single smoke test also runs `--format markdown`.
+- [x] The summary script's single smoke test also runs `--format markdown`.
   It stays one test.
-- [ ] Depth rule, tasks declare: every task touched supplies only a
+- [x] Depth rule, tasks declare: every task touched supplies only a
   `HeadlineDefinition` built from the closed measure set and functions over a
   single case. No task defines a `ReportEvaluator`, builds table rows, or
   computes a population or failure rate.
-- [ ] Depth rule, readers call: only the run report module classifies reports,
+- [x] Depth rule, readers call: only the run report module classifies reports,
   accounts for the population, compares or renders. The summary script and
   the RAG reviewer gain none of that logic, and nothing outside the headline
   and run report modules parses table rows.
-- [ ] Depth rule, two seams: tests cross only the engine-run seam and the run
+- [x] Depth rule, two seams: tests cross only the engine-run seam and the run
   report module's interface (`ReportDocument.load` and `Scorecard.build`). The
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test

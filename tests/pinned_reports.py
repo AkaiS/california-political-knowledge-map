@@ -12,7 +12,9 @@ import json
 import re
 
 # A case's task duration is measured, so its quantile rows differ on every run.
-DURATION_VALUE = re.compile(r"(\| task_duration_p\d+ \| )[^|]+")
+# Only a value rendered as a plain number is replaced, so a change to how
+# quantile values render still shows up in the expected text.
+DURATION_VALUE = re.compile(r"(\| task_duration_p\d+ \| )\d+\.\d{3} ")
 
 
 def pinned(path, metadata=None, **fields):

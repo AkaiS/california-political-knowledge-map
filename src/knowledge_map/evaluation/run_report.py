@@ -239,12 +239,12 @@ class Axis(BaseModel, frozen=True):
 
     def to_markdown(self) -> str:
         headline, summary = self.headline, self.summary
-        counts, provenance = summary["counts"], summary["provenance"]
+        counts = summary["counts"]
         changes = self._changes()
         parts = [
             f"## {summary['task']}: {self._result(changes)}",
             (
-                f"Population: label quality {provenance['label_quality'] or 'unknown'}, "
+                f"Population: label quality {self._label_quality()}, "
                 f"selection scope {summary['scope']}; {counts['selected']} selected, "
                 f"{counts['scored']} scored, {counts['execution_failures']} failed, "
                 f"{counts['unresolved']} unresolved."
@@ -306,8 +306,7 @@ class Axis(BaseModel, frozen=True):
     def _summary_cells(self) -> tuple[str, ...]:
         headline, summary = self.headline, self.summary
         counts = summary["counts"]
-        label_quality = summary["provenance"]["label_quality"] or "unknown"
-        status = self.comparison.status.replace("_", " ")
+        label_quality, status = self._label_quality(), self._status()
         if isinstance(headline, NoHeadline):
             return (
                 summary["task"],
@@ -322,23 +321,33 @@ class Axis(BaseModel, frozen=True):
         primary = headline.primary
         failures = headline.row(EXECUTION_FAILURE_RATE, Aggregation.RATE)
         change = self._changes().get((primary.metric, primary.aggregation))
+        if primary.value is not None:
+            value = _row_value(primary)
+        elif label_quality == "unlabeled":
+            # An Unlabeled Set has no answer labels, so nothing measures quality.
+            value = "no quality metric"
+        else:
+            value = f"unavailable ({primary.unavailable_reason})"
         return (
             summary["task"],
             label_quality,
             primary.metric,
-            # An Unlabeled Set's primary row says it has no quality metric.
-            f"unavailable ({primary.unavailable_reason})"
-            if primary.value is None
-            else _row_value(primary),
+            value,
             _change_cells(change)[1],
             f"{primary.scored_cases}/{primary.selected_cases}",
             "-" if failures is None else _row_value(failures),
             status,
         )
 
+    def _label_quality(self) -> str:
+        return self.summary["provenance"]["label_quality"] or "unknown"
+
+    def _status(self) -> str:
+        return self.comparison.status.replace("_", " ")
+
     def _baseline(self) -> str:
         comparison = self.comparison
-        status = comparison.status.replace("_", " ")
+        status = self._status()
         if comparison.baseline is None:
             return f"none ({status})"
         notes = []

@@ -29,7 +29,7 @@ owns Data Set validation, selection, persistence, and the summary.
    use `uv run scripts/run_evaluation.py --report PATH`; repeat `--report` for
    one scorecard axis per attempt. JSON is the default output; `--format
    markdown` prints the scorecard for a person, and you quote it as printed.
-   `--baseline` defaults to `auto`, the newest earlier Comparable Run; pass a
+   `--baseline` defaults to `auto`, the newest earlier Comparable Run saved beside the report; pass a
    report PATH to compare against that report, or `none` for no comparison.
 5. Before presenting the reviewer link as live, verify the listening process
    serves the summary's absolute `reviewer_reports_dir`. An existing server may
