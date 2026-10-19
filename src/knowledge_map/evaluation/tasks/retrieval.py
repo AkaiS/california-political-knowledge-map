@@ -32,7 +32,7 @@ from knowledge_map.schemas.retrieval import (
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
-from ..headline import CaseMean, HeadlineDefinition, Rate, Role
+from ..headline import COMPLETED_ANSWER_RATE, CaseMean, HeadlineDefinition, Rate, Role
 from ..retrieval_report import METRIC_VERSION
 from .chat import (
     ChatFailure,
@@ -330,7 +330,7 @@ RETRIEVAL_HEADLINE = HeadlineDefinition(
     version=HEADLINE_VERSIONS[METRIC_VERSION],
     measures=(
         CaseMean(score="fused_recall_at_10", role=Role.PRIMARY),
-        Rate.operational("completed_answer_rate", completed_answer, Role.HEADLINE),
+        Rate.operational(COMPLETED_ANSWER_RATE, completed_answer, Role.HEADLINE),
         CaseMean(score="fused_recall_at_5", role=Role.HEADLINE),
         CaseMean(score="fused_reciprocal_rank", role=Role.HEADLINE),
         CaseMean(score="fused_complete_evidence_at_10", role=Role.HEADLINE),

@@ -1,6 +1,6 @@
 # Product requirements: Evaluation headline metrics
 
-Labels: ready-for-agent
+Labels: completed
 
 ## Problem Statement
 
@@ -353,7 +353,7 @@ Error analysis finds where a run broke.
 | --- | --- | --- | --- | --- |
 | Relevance | Gold | RELEVANT F1 (pooled) | RELEVANT precision and recall; accuracy; confusion-matrix counts | none |
 | Extraction | Silver | node F1 (pooled) | node precision and recall; relationship precision, recall and F1 (pooled); node and relationship F1 (per-case mean); ontology conformance rate | sub-label, node-property, claim-property and stance-alignment accuracy |
-| Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster F1 and canonical-entity accuracy, both pooled over mention spans both sides found; mention-span F1 (per-case mean) | none |
+| Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster precision, recall and F1 and canonical-entity accuracy, all pooled over mention spans both sides found; mention-span F1 (per-case mean) | none |
 | Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | none |
 | Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
 | Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
@@ -369,7 +369,7 @@ Definitions that the table doesn't settle:
   mention span both sides found, across all cases. That weights each mention
   equally.
 - **Label-macro F1** is the mean F1 over the Policy Areas present in the
-  selected cases' reference labels. Areas the model predicted but the
+  reference labels of the selected cases that succeeded. Areas the model predicted but the
   reference never used appear only in pooled precision and in the per-area
   diagnostic rows.
 - **Retrieval** keeps the per-question mean because each question is one
@@ -379,8 +379,8 @@ Definitions that the table doesn't settle:
 - **Chat's completed-answer rule** is the one the summary script applies today.
   Question status comes from the recorded question preparation or assessment
   status: Declined, Deferred or needs edit, using the glossary's distinction
-  between Declined and Deferred. Today's summary counts only declines. Both
-  rules move into the chat headline evaluator, and the summary reads the table.
+  between Declined and Deferred. Before this spec the summary counted
+  only declines. Both rules move into the chat headline evaluator, and the summary reads the table.
   Retrieval's headline reuses the completed-answer rule.
 - **Chat's task duration** covers only cases that completed without a recorded
   failure. Pydantic Evals records no duration for a case whose task raised, so
@@ -407,7 +407,9 @@ Definitions that the table doesn't settle:
   comparable with the failed conditions. No deltas are shown for it.
 - The summary gains a comparison block with:
   - the baseline path;
-  - one of `comparable`, `comparable_with_caveat` or `not_comparable`;
+  - one of `comparable`, `comparable_with_caveat` or `not_comparable`, or
+    `no_earlier_run` when `auto` finds no earlier same-task report, or
+    `not_requested` under `--baseline none`;
   - each failed condition;
   - a delta for each primary and headline row.
 - A dirty worktree on either side produces `comparable_with_caveat` and names
@@ -426,7 +428,8 @@ Definitions that the table doesn't settle:
   copies it as it is.
 - A one-axis scorecard has these parts, in order:
   - A heading naming the task, its primary metric and value, and the change
-    against the baseline, or "no comparable baseline".
+    against the baseline, or "no comparable baseline". When the primary value
+    is unavailable, the heading gives its reason instead.
   - A population line: label quality, selection scope, and the selected,
     scored, failed and unresolved counts.
   - A baseline line: the baseline report and its comparison status, naming
@@ -499,8 +502,8 @@ temporary directory with `ReportDocument.load`, build a `Scorecard` with
 `exit_code`.
 
 - **Baseline selection:** each non-matching condition is rejected on its own
-  (Data Set revision, selected case IDs, headline version, task and incomplete
-  status). Model Deployment and prompt digests may differ.
+  (Data Set revision, selected case IDs, headline version, task, incomplete
+  status and a missing selection manifest). Model Deployment and prompt digests may differ.
 - **Explicit baselines** that aren't comparable produce no deltas.
 - **Dirty worktrees** produce the caveat, and a newer dirty Comparable Run
   beats an older clean one.
@@ -530,7 +533,8 @@ come from a headline table.
 - The `report-evaluation` skill and its agent slots. On 2026-10-16 the
   maintainer deferred them until they have seen how evaluations they ask an
   LLM to perform come out once the scorecard exists. The parked design is in
-  the [skill design](skill-design.md). The `run-evaluation` skill is unchanged.
+  the [skill design](skill-design.md). The `run-evaluation` skill keeps its
+  routing; it only documents the summary script's new flags.
 - Re-baseline runs for each task. They make model calls and follow
   implementation.
 - First runs of Policy Area Classification and Topic Assignment, beyond their
@@ -554,3 +558,7 @@ come from a headline table.
   - F1 is primary for relevance and coreference.
   - Retrieval uses the per-case mean.
   - A dirty worktree is a caveat, not a block.
+- On 2026-10-19 the maintainer allowed `retrieval-v1`, `coreference-v1` and
+  `coreference_annotator-v1` to be edited in place when their headline sets
+  were trimmed to outcomes. No real run had recorded any of them, so no saved
+  report changed meaning. User story 18 applies from their first recorded run.

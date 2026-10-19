@@ -37,3 +37,10 @@ Labels: completed
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test
   seam.
+
+## Comments
+
+- 2026-10-19, final review: "the selected cases' reference labels" means the
+  selected cases that succeeded. `PerLabel` is a quality measure, so, as the
+  PRD's Modules section and ADR 0024 require, a failed case adds no Policy
+  Area to label-macro F1. The PRD's definition now says so.

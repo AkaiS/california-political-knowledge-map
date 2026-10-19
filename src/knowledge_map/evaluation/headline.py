@@ -46,6 +46,11 @@ __all__ = [
 
 TITLE = "Headline metrics"
 EXECUTION_FAILURE_RATE = "execution_failure_rate"
+# The run's population summary counts completed answers and declines from the
+# rows the chat and retrieval definitions record, so writer and reader share
+# one name for each.
+COMPLETED_ANSWER_RATE = "completed_answer_rate"
+DECLINED_RATE = "declined_rate"
 COLUMNS = (
     "metric",
     "role",

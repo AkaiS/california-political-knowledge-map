@@ -17,6 +17,11 @@ annotation rules.
 | Annotate Topic Assignment | [Topic assignment annotation](topic-assignment-annotation.md) |
 
 For evaluation artifact provenance and storage decisions, see
-[ADR 0024](../adr/0024-evaluations-preserve-the-selected-population-and-progress.md). To inspect
+[ADR 0024](../adr/0024-evaluations-preserve-the-selected-population-and-progress.md).
+Every completed Evaluation Run records its task's Headline Metrics in its
+report, as [ADR 0026](../adr/0026-evaluation-reports-freeze-their-run-result.md)
+decides. `uv run scripts/run_evaluation.py --report PATH --format markdown`
+renders them as a scorecard, compared against the newest earlier Comparable
+Run. To inspect
 application decisions and model activity, use the
 [Chat Session trail guide](../chat-session-trails.md).

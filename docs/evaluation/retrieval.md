@@ -218,6 +218,13 @@ enter a model request.
 
 ## Read the metrics
 
+A completed run's result is its `retrieval-v1` Headline Metrics table. Its
+primary metric is fused Recall@10, averaged per question. The headline rows
+are the completed-answer rate, fused Recall@5, fused reciprocal rank, fused
+complete evidence@10, final-context recall and final-context complete
+evidence, plus the execution failure rate. Failed cases stay out of the
+quality rows. The case scores below serve error analysis.
+
 For full-text, dense, structural when requested, and fusion, the task reports
 Recall@1, @5, @10 and @50. Recall is the fraction of unique reference identities
 found in the first k unique Article Chunks. Rank follows the recorded branch

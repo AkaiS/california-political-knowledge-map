@@ -1,7 +1,7 @@
 # Skill design: report-evaluation
 
 Companion to the [Evaluation headline metrics PRD](PRD.md). Parked on
-2026-10-16: the PRD builds the scorecard layout below; the skill and its agent
+2026-10-16: the PRD builds the scorecard; the skill and its agent
 slots are deferred until the maintainer has seen how evaluations come out once
 the scorecard exists. This document designs the skill and the scorecard it
 presents. The skill is not live.
@@ -39,6 +39,12 @@ branch between them:
   of step 4 shrinks to finishing the run and capturing the report path.
 
 ## Scorecard layout
+
+This is the sketch the PRD started from. The built scorecard,
+`Scorecard.to_markdown` in `src/knowledge_map/evaluation/run_report.py`, is
+authoritative where they differ: its heading level, column names, metric
+names and the "Diagnostic rows" section title come from ticket 08's snapshot
+tests, not from this sketch.
 
 ### One axis
 
@@ -128,8 +134,9 @@ slots around it.
    prose appears in the scorecard and every case line comes from reading that
    case's output.
 
-When a report has no headline table, the scorecard says why: it either predates
-headline metrics or comes from an incomplete run. Pass that reason on, report
+When a report has no headline table, the scorecard says why: it predates
+headline metrics, comes from an incomplete run, or its headline evaluator
+failed. Pass that reason on, report
 the population block, and offer a full rerun with `run-evaluation`.
 ```
 

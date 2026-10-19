@@ -21,6 +21,8 @@ from urllib.parse import quote
 from pydantic import BaseModel
 
 from .headline import (
+    COMPLETED_ANSWER_RATE,
+    DECLINED_RATE,
     EXECUTION_FAILURE_RATE,
     Aggregation,
     Headline,
@@ -626,9 +628,9 @@ def _axis(document: ReportDocument, reviewer_port: int) -> Axis:
     # The task's headline evaluator owns the completed-answer and decline
     # rules; a report without its table has no such counts.
     summary["counts"]["completed_answers"] = _recorded_count(
-        headline, "completed_answer_rate"
+        headline, COMPLETED_ANSWER_RATE
     )
-    summary["counts"]["declined"] = _recorded_count(headline, "declined_rate")
+    summary["counts"]["declined"] = _recorded_count(headline, DECLINED_RATE)
     return Axis(headline_version=version, headline=headline, summary=summary)
 
 

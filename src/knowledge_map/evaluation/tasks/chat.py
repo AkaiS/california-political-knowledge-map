@@ -54,6 +54,8 @@ from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
 from ..headline import (
+    COMPLETED_ANSWER_RATE,
+    DECLINED_RATE,
     Aggregation,
     HeadlineDefinition,
     Quantile,
@@ -393,8 +395,8 @@ CHAT_HEADLINE = HeadlineDefinition(
             role=Role.PRIMARY,
             reason="Unlabeled Set: no quality metric",
         ),
-        Rate.operational("completed_answer_rate", completed_answer, Role.HEADLINE),
-        Rate.operational("declined_rate", _question_status("declined"), Role.HEADLINE),
+        Rate.operational(COMPLETED_ANSWER_RATE, completed_answer, Role.HEADLINE),
+        Rate.operational(DECLINED_RATE, _question_status("declined"), Role.HEADLINE),
         Rate.operational("deferred_rate", _question_status("deferred"), Role.HEADLINE),
         Rate.operational(
             "needs_edit_rate", _question_status("needs_edit"), Role.HEADLINE
