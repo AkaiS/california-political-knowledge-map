@@ -12,7 +12,7 @@ see what the Critic rounds are worth.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,7 +40,6 @@ from knowledge_map.schemas import (
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..headline import (
-    Aggregation,
     CaseMean,
     Counts,
     HeadlineDefinition,
@@ -48,7 +47,6 @@ from ..headline import (
     Pooled,
     Role,
     SetAgreement,
-    Unavailable,
     detection_counts,
 )
 from ..scoring import UNSCORED, detection_scores, f1
@@ -376,12 +374,9 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
 _REJECTION_PRECISION = "critic_rejection_precision"
 _REJECTION_RECALL = "critic_rejection_recall"
 _KEPT_CORRECT_SPANS = "critic_kept_correct_spans"
-CRITIC_SCORES = (_REJECTION_PRECISION, _REJECTION_RECALL, _KEPT_CORRECT_SPANS)
 
 
-def _critic_decisions(
-    case: EvaluatorContext | ReportCase,
-) -> dict[str, tuple[int, int]]:
+def _critic_decisions(case: EvaluatorContext) -> dict[str, tuple[int, int]]:
     """Each Critic score's numerator and denominator over the judged decisions.
 
     A score is absent when the case had no decision it could be judged on.
@@ -436,13 +431,6 @@ def _span_counts(case: ReportCase) -> Counts:
     )
 
 
-def _critic_decision(name: str) -> Callable[[ReportCase], tuple[int, int] | None]:
-    def contribution(case: ReportCase) -> tuple[int, int] | None:
-        return _critic_decisions(case).get(name)
-
-    return contribution
-
-
 #: Agreement is recorded the same way for the annotator alone and for the
 #: whole loop, so the two reports subtract.
 AGREEMENT_MEASURES: tuple[Measure, ...] = (
@@ -466,36 +454,14 @@ AGREEMENT_MEASURES: tuple[Measure, ...] = (
     CaseMean(score="span_f1", role=Role.HEADLINE),
 )
 
-#: The Critic rows pool every judged decision across cases.
+#: The Critic is a stage inside the loop, so its decisions stay in the case
+#: scores for error analysis rather than in the headline.
 COREFERENCE_HEADLINE = HeadlineDefinition(
-    version="coreference-v1",
-    measures=(
-        *AGREEMENT_MEASURES,
-        *(
-            Pooled(
-                metric=name,
-                contribution=_critic_decision(name),
-                role=Role.DIAGNOSTIC,
-            )
-            for name in CRITIC_SCORES
-        ),
-    ),
+    version="coreference-v1", measures=AGREEMENT_MEASURES
 )
 
 COREFERENCE_ANNOTATOR_HEADLINE = HeadlineDefinition(
-    version="coreference_annotator-v1",
-    measures=(
-        *AGREEMENT_MEASURES,
-        *(
-            Unavailable(
-                metric=name,
-                aggregation=Aggregation.POOLED,
-                role=Role.DIAGNOSTIC,
-                reason="the annotator task makes no critic decisions",
-            )
-            for name in CRITIC_SCORES
-        ),
-    ),
+    version="coreference_annotator-v1", measures=AGREEMENT_MEASURES
 )
 
 

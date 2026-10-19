@@ -167,85 +167,22 @@ AGREEMENT_ROWS = [
 ]
 
 
-def test_completed_coreference_run_records_pooled_span_f1_first_and_the_critic_rows(
-    tmp_path,
+@pytest.mark.parametrize(
+    ("task_name", "version"),
+    [
+        ("coreference", "coreference-v1"),
+        ("coreference_annotator", "coreference_annotator-v1"),
+    ],
+)
+def test_both_tasks_record_pooled_span_f1_first_and_the_same_agreement_rows(
+    tmp_path, task_name, version
 ):
-    document = saved_run(tmp_path, "coreference", [MERGED, SPLIT, NOTHING_SHARED])
+    document = saved_run(tmp_path, task_name, [MERGED, SPLIT, NOTHING_SHARED])
 
-    # Critic, over the decisions on mentions silver annotated: merged rejected
-    # one wrong span, kept one wrong and two correct; split rejected one
-    # correct span, kept one wrong and one correct.
-    assert headline_table(document) == [
-        *AGREEMENT_ROWS,
-        [
-            "critic_rejection_precision",
-            "diagnostic",
-            1 / 2,
-            1.0,
-            2.0,
-            "pooled",
-            2,
-            3,
-            None,
-        ],
-        [
-            "critic_rejection_recall",
-            "diagnostic",
-            1 / 3,
-            1.0,
-            3.0,
-            "pooled",
-            2,
-            3,
-            None,
-        ],
-        [
-            "critic_kept_correct_spans",
-            "diagnostic",
-            3 / 4,
-            3.0,
-            4.0,
-            "pooled",
-            2,
-            3,
-            None,
-        ],
-    ]
-    assert document["experiment_metadata"]["headline_version"] == "coreference-v1"
-
-
-def test_annotator_run_records_the_same_agreement_rows_and_no_critic_values(
-    tmp_path,
-):
-    document = saved_run(
-        tmp_path, "coreference_annotator", [MERGED, SPLIT, NOTHING_SHARED]
-    )
-
-    assert headline_table(document) == [
-        *AGREEMENT_ROWS,
-        *(
-            [
-                metric,
-                "diagnostic",
-                None,
-                None,
-                None,
-                "pooled",
-                0,
-                3,
-                "the annotator task makes no critic decisions",
-            ]
-            for metric in (
-                "critic_rejection_precision",
-                "critic_rejection_recall",
-                "critic_kept_correct_spans",
-            )
-        ),
-    ]
-    assert (
-        document["experiment_metadata"]["headline_version"]
-        == "coreference_annotator-v1"
-    )
+    # The Critic is a stage inside the loop, so neither table has a row for
+    # its decisions, and neither has diagnostic rows.
+    assert headline_table(document) == AGREEMENT_ROWS
+    assert document["experiment_metadata"]["headline_version"] == version
 
 
 NO_DENOMINATOR = "no case contributed to the denominator"
@@ -328,8 +265,7 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     ]
     del clean[8]
     # Every quality row reads exactly as it did without the failures, over
-    # the larger run population; the emptied run's rejections add nothing to
-    # the Critic rows.
+    # the larger run population.
     assert [[*row[:7], 5, row[8]] for row in clean] == rows
 
 
