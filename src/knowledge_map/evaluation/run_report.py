@@ -28,6 +28,7 @@ REVIEWER_SCRIPT = (
     Path(__file__).resolve().parents[3] / "scripts" / "review_chat_eval.py"
 )
 DEFAULT_REVIEWER_PORT = 8766
+Baseline = Literal["auto", "none"] | Path
 
 
 class NoHeadline(BaseModel, frozen=True):
@@ -234,36 +235,35 @@ class Scorecard(BaseModel, frozen=True):
     def build(
         cls,
         documents: Sequence[ReportDocument],
-        baseline: Literal["auto", "none"] | Path,
+        baseline: Baseline,
         *,
         reviewer_port: int = DEFAULT_REVIEWER_PORT,
     ) -> Scorecard:
         if not 1 <= reviewer_port <= 65535:
             raise ValueError("Reviewer port must be between 1 and 65535")
         axes = tuple(_axis(document, reviewer_port) for document in documents)
+        if baseline == "none":
+            return cls(axes=axes)
         if isinstance(baseline, Path):
             baseline_document = ReportDocument.load(baseline)
             baseline_axis = _axis(baseline_document, reviewer_port)
-            axes = tuple(
-                axis.model_copy(
-                    update={
-                        "comparison": Comparison.between(
-                            document, axis, baseline_document, baseline_axis
-                        )
-                    }
+
+            def compare(document: ReportDocument, axis: Axis) -> Comparison:
+                return Comparison.between(
+                    document, axis, baseline_document, baseline_axis
                 )
-                for document, axis in zip(documents, axes, strict=True)
-            )
         elif baseline == "auto":
-            axes = tuple(
-                axis.model_copy(
-                    update={"comparison": _automatic(document, axis, reviewer_port)}
-                )
+
+            def compare(document: ReportDocument, axis: Axis) -> Comparison:
+                return _against_newest_comparable_run(document, axis, reviewer_port)
+        else:
+            raise ValueError(f"unsupported baseline {baseline!r}")
+        return cls(
+            axes=tuple(
+                axis.model_copy(update={"comparison": compare(document, axis)})
                 for document, axis in zip(documents, axes, strict=True)
             )
-        elif baseline != "none":
-            raise ValueError(f"unsupported baseline {baseline!r}")
-        return cls(axes=axes)
+        )
 
     def to_json(self) -> dict[str, Any]:
         """The one axis's summary, or every axis's in argument order."""
@@ -279,12 +279,20 @@ class Scorecard(BaseModel, frozen=True):
         return 1 if any(axis.failed for axis in self.axes) else 0
 
 
-def _automatic(document: ReportDocument, axis: Axis, reviewer_port: int) -> Comparison:
-    """Compare against the newest earlier Comparable Run beside ``document``."""
+def _against_newest_comparable_run(
+    document: ReportDocument, axis: Axis, reviewer_port: int
+) -> Comparison:
+    """Compare against the newest earlier Comparable Run beside ``document``.
+
+    Without one, the newest earlier same-task report's failed conditions say
+    why.
+    """
 
     ran_at = _ran_at(document)
+    if ran_at is None:
+        return Comparison(status="no_earlier_run")
     earlier: list[tuple[datetime, ReportDocument]] = []
-    for path in document.path.parent.glob("*.json") if ran_at else ():
+    for path in document.path.parent.glob("*.json"):
         try:
             candidate = ReportDocument.load(path)
         except ValueError:
@@ -296,15 +304,18 @@ def _automatic(document: ReportDocument, axis: Axis, reviewer_port: int) -> Comp
             and when < ran_at
         ):
             earlier.append((when, candidate))
-    newest: Comparison | None = None
-    for _, candidate in sorted(earlier, key=lambda pair: pair[0], reverse=True):
-        comparison = Comparison.between(
-            document, axis, candidate, _axis(candidate, reviewer_port)
-        )
-        if comparison.status != "not_comparable":
-            return comparison
-        newest = newest or comparison
-    return newest or Comparison(status="no_earlier_run")
+    comparisons = (
+        Comparison.between(document, axis, candidate, _axis(candidate, reviewer_port))
+        for _, candidate in sorted(earlier, key=lambda pair: pair[0], reverse=True)
+    )
+    newest = next(comparisons, None)
+    if newest is None:
+        return Comparison(status="no_earlier_run")
+    if newest.status != "not_comparable":
+        return newest
+    return next(
+        (each for each in comparisons if each.status != "not_comparable"), newest
+    )
 
 
 def _ran_at(document: ReportDocument) -> datetime | None:

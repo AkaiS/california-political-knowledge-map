@@ -11,7 +11,7 @@ import hashlib
 import json
 import random
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import yaml
 
@@ -19,6 +19,7 @@ from knowledge_map.cli import evaluate
 from knowledge_map.evaluation.data_set import data_set_path, load_data_set
 from knowledge_map.evaluation.run_report import (
     DEFAULT_REVIEWER_PORT,
+    Baseline,
     ReportDocument,
     Scorecard,
 )
@@ -150,7 +151,7 @@ def resolve_plan(
 def summarize_report(
     path: Path,
     *,
-    baseline: Literal["auto", "none"] | Path = "auto",
+    baseline: Baseline = "auto",
     reviewer_port: int = DEFAULT_REVIEWER_PORT,
 ) -> Scorecard:
     """A planned run's single-axis Scorecard."""
@@ -161,12 +162,12 @@ def summarize_report(
     )
 
 
-def _baseline(value: str) -> Literal["auto", "none"] | Path:
+def _baseline(value: str) -> Baseline:
     return value if value in ("auto", "none") else Path(value)
 
 
 def execute_plan(
-    plan: dict[str, Any], *, baseline: Literal["auto", "none"] | Path = "auto"
+    plan: dict[str, Any], *, baseline: Baseline = "auto"
 ) -> tuple[dict[str, Any] | None, int]:
     path = Path(plan["data_set"])
     if _sha256(path) != plan["data_set_sha256"]:

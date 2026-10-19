@@ -8,11 +8,11 @@ summary script only passes `--baseline` through.
 
 **Blocked by:** 01, Record Headline Metrics end to end for Relevance.
 
-Labels: ready-for-agent
+Labels: completed
 
-- [ ] The summary script accepts `--baseline auto|PATH|none`, defaulting to
+- [x] The summary script accepts `--baseline auto|PATH|none`, defaulting to
   `auto`, and passes it to `Scorecard.build` unchanged.
-- [ ] A comparison checks six conditions independently and lists each one that
+- [x] A comparison checks six conditions independently and lists each one that
   fails:
   - task;
   - Data Set revision;
@@ -22,31 +22,31 @@ Labels: ready-for-agent
   - a selection manifest on both sides.
 
   Model Deployment, prompt digests and commit are never checked.
-- [ ] `auto` considers only reports beside the current one with an earlier
+- [x] `auto` considers only reports beside the current one with an earlier
   `ran_at`. It picks the newest that is `comparable` or
   `comparable_with_caveat`, with no preference for clean worktrees.
-- [ ] With no candidate, the comparison carries the newest same-task report's
+- [x] With no candidate, the comparison carries the newest same-task report's
   failed conditions, or "no earlier run".
-- [ ] A dirty worktree on either side gives `comparable_with_caveat` and names
+- [x] A dirty worktree on either side gives `comparable_with_caveat` and names
   which side is dirty.
-- [ ] Changes are computed for primary and headline rows only, and are null
+- [x] Changes are computed for primary and headline rows only, and are null
   when either value is null.
-- [ ] An explicit baseline that isn't comparable keeps its failed conditions
+- [x] An explicit baseline that isn't comparable keeps its failed conditions
   and gets no changes.
-- [ ] `Scorecard` tests over saved documents in a temporary directory:
+- [x] `Scorecard` tests over saved documents in a temporary directory:
   - reject each condition on its own;
   - accept a different Model Deployment and different prompt digests;
   - prefer a newer dirty Comparable Run over an older clean one;
   - never choose a later report as the baseline.
-- [ ] Depth rule, tasks declare: every task touched supplies only a
+- [x] Depth rule, tasks declare: every task touched supplies only a
   `HeadlineDefinition` built from the closed measure set and functions over a
   single case. No task defines a `ReportEvaluator`, builds table rows, or
   computes a population or failure rate.
-- [ ] Depth rule, readers call: only the run report module classifies reports,
+- [x] Depth rule, readers call: only the run report module classifies reports,
   accounts for the population, compares or renders. The summary script and
   the RAG reviewer gain none of that logic, and nothing outside the headline
   and run report modules parses table rows.
-- [ ] Depth rule, two seams: tests cross only the engine-run seam and the run
+- [x] Depth rule, two seams: tests cross only the engine-run seam and the run
   report module's interface (`ReportDocument.load` and `Scorecard.build`). The
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test
