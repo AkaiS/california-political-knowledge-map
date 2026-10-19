@@ -27,30 +27,36 @@ def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
+def with_fp_output(output):
+    """The confusion cases with the "fp" case's output replaced by ``output``."""
+
+    return [
+        (case_id, expected, output(expected) if case_id == "fp" else recorded)
+        for case_id, expected, recorded in CONFUSION_CASES
+    ]
+
+
 # The baseline run classifies "fp" correctly: 2 TP, 0 FP, 1 FN, 2 TN.
-BETTER_CASES = [
-    (case_id, expected, expected if case_id == "fp" else output)
-    for case_id, expected, output in CONFUSION_CASES
-]
+BETTER_CASES = with_fp_output(lambda expected: expected)
 
 
-def varied(path, **metadata):
-    """Save ``path`` again with its top-level ``metadata`` replaced."""
+def varied(path, **fields):
+    """Save ``path`` again with the given top-level report fields overwritten."""
 
     document = json.loads(path.read_text())
-    document.update(metadata)
+    document.update(fields)
     path.write_text(json.dumps(document))
     return path
 
 
-def run(directory, cases=CONFUSION_CASES, **metadata):
-    """A saved relevance run; its worktree is clean unless ``metadata`` says so.
+def run(directory, cases=CONFUSION_CASES, **fields):
+    """A saved relevance run; its worktree is clean unless ``fields`` says so.
 
     The report checkpoint records this checkout's real worktree state, so each
     run pins it.
     """
 
-    return varied(run_relevance(directory, cases), **{"dirty": False, **metadata})
+    return varied(run_relevance(directory, cases), **{"dirty": False, **fields})
 
 
 def compared(current, baseline):
@@ -92,14 +98,8 @@ def without_selection_manifest(path):
     return path
 
 
-INTERRUPTED_AT_FP = [
-    (case_id, expected, KeyboardInterrupt("operator") if case_id == "fp" else output)
-    for case_id, expected, output in CONFUSION_CASES
-]
-UNREADABLE_FP = [
-    (case_id, expected, None if case_id == "fp" else output)
-    for case_id, expected, output in CONFUSION_CASES
-]
+INTERRUPTED_AT_FP = with_fp_output(lambda _: KeyboardInterrupt("operator"))
+UNREADABLE_FP = with_fp_output(lambda _: None)
 
 
 @pytest.mark.parametrize(
@@ -198,6 +198,21 @@ def test_every_failed_condition_is_listed(tmp_path):
     ]
     assert comparison["dirty_worktree"] == ["baseline"]
     assert comparison["changes"] == []
+
+
+def test_incomplete_current_run_against_a_comparable_run_has_no_changes(tmp_path):
+    # A Comparable Run is a property of the baseline; the current run's own
+    # incompleteness is reported by its population and exit code.
+    baseline = run(tmp_path / "baseline")
+    current = run(tmp_path / "current", INTERRUPTED_AT_FP)
+
+    card = Scorecard.build([ReportDocument.load(current)], baseline=baseline)
+    summary = card.to_json()
+
+    assert summary["status"] == "incomplete"
+    assert summary["comparison"]["status"] == "comparable"
+    assert summary["comparison"]["changes"] == []
+    assert card.exit_code == 1
 
 
 def test_system_under_test_may_differ_between_comparable_runs(tmp_path):
