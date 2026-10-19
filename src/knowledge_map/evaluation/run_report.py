@@ -68,6 +68,8 @@ class Change(BaseModel, frozen=True):
     aggregation: Aggregation
     value: float | None
     baseline_value: float | None
+    baseline_numerator: float | None
+    baseline_denominator: float | None
     change: float | None
 
 
@@ -185,6 +187,8 @@ def _change(row: HeadlineRow, baseline: Headline) -> Change:
         aggregation=row.aggregation,
         value=row.value,
         baseline_value=baseline_value,
+        baseline_numerator=None if match is None else match.numerator,
+        baseline_denominator=None if match is None else match.denominator,
         change=None
         if row.value is None or baseline_value is None
         else row.value - baseline_value,
@@ -229,8 +233,12 @@ class Axis(BaseModel, frozen=True):
     def to_markdown(self) -> str:
         headline, summary = self.headline, self.summary
         counts, provenance = summary["counts"], summary["provenance"]
+        changes = {
+            (change.metric, change.aggregation): change
+            for change in self.comparison.changes
+        }
         parts = [
-            f"## {summary['task']}: {self._result()}",
+            f"## {summary['task']}: {self._result(changes)}",
             (
                 f"Population: label quality {provenance['label_quality'] or 'unknown'}, "
                 f"selection scope {summary['scope']}; {counts['selected']} selected, "
@@ -245,10 +253,6 @@ class Axis(BaseModel, frozen=True):
         else:
             rows = (*headline.by_role(Role.PRIMARY), *headline.by_role(Role.HEADLINE))
             diagnostic = headline.by_role(Role.DIAGNOSTIC)
-            changes = {
-                (change.metric, change.aggregation): change
-                for change in self.comparison.changes
-            }
             parts.append(
                 _table(
                     rows,
@@ -273,28 +277,27 @@ class Axis(BaseModel, frozen=True):
             )
         return "\n\n".join(parts) + "\n"
 
-    def _result(self) -> str:
+    def _result(self, changes: dict[tuple[str, Aggregation], Change]) -> str:
         headline = self.headline
         if isinstance(headline, NoHeadline):
             return "no Headline Metrics"
         primary = headline.primary
-        changes = self.comparison.changes
+        if primary.value is None:
+            # A missing value has no change to report; its reason says why.
+            return f"{primary.metric} unavailable ({primary.unavailable_reason})"
+        change = changes.get((primary.metric, primary.aggregation))
         against = (
             "no comparable baseline"
-            if not changes
-            else f"{_number(changes[0].change, signed=True)} against the baseline"
+            if change is None
+            else f"{_number(change.change, signed=True)} against the baseline"
         )
         return f"{primary.metric} {_number(primary.value)} ({against})"
 
     def _baseline(self) -> str:
         comparison = self.comparison
+        status = comparison.status.replace("_", " ")
         if comparison.baseline is None:
-            return f"none ({comparison.status.replace('_', ' ')})"
-        status = {
-            "comparable": "comparable",
-            "comparable_with_caveat": "comparable with caveat",
-            "not_comparable": "not comparable",
-        }[comparison.status]
+            return f"none ({status})"
         notes = []
         if comparison.failed_conditions:
             notes.append("failed " + ", ".join(comparison.failed_conditions))
@@ -346,10 +349,39 @@ def _number(value: float | None, *, signed: bool = False) -> str:
     return f"{value:+.3f}" if signed else f"{value:.3f}"
 
 
+def _value(
+    aggregation: Aggregation,
+    value: float | None,
+    numerator: float | None,
+    denominator: float | None,
+) -> str:
+    # A rate alone hides how many cases it rests on; a reader comparing one
+    # run with the next needs the count beside it.
+    if (
+        aggregation not in (Aggregation.RATE, Aggregation.POOLED)
+        or numerator is None
+        or denominator is None
+    ):
+        return _number(value)
+    return f"{_number(value)} ({_count(numerator)}/{_count(denominator)})"
+
+
+def _count(count: float) -> str:
+    return f"{count:.0f}" if count.is_integer() else f"{count:.3f}"
+
+
 def _change_cells(change: Change | None) -> tuple[str, str]:
     if change is None:
         return ("-", "-")
-    return (_number(change.baseline_value), _number(change.change, signed=True))
+    return (
+        _value(
+            change.aggregation,
+            change.baseline_value,
+            change.baseline_numerator,
+            change.baseline_denominator,
+        ),
+        _number(change.change, signed=True),
+    )
 
 
 def _table(
@@ -367,7 +399,7 @@ def _table(
         + " | ".join(
             (
                 row.metric,
-                _number(row.value),
+                _value(row.aggregation, row.value, row.numerator, row.denominator),
                 *extra_cells(row),
                 f"{row.scored_cases}/{row.selected_cases}",
                 row.aggregation.value,
@@ -724,8 +756,9 @@ def _summary(
             "selected": len(selected_ids),
             "attempted": len(set(started) | set(counts)),
             "terminal": len(expected_set & set(counts)),
-            # The cases a quality measure sees: selected, completed, and
-            # without a recorded failure.
+            # A quality measure sees only the selected cases that completed
+            # without a recorded failure, so a reader needs that count beside
+            # the failed and unresolved ones to know what the values rest on.
             "scored": len(
                 {
                     case["name"]

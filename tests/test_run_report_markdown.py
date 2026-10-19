@@ -29,8 +29,11 @@ def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
-def pinned(path, **fields):
-    """Save ``path`` again with its environment-recorded fields pinned."""
+def pinned(path, metadata=None, **fields):
+    """Save ``path`` again with its environment-recorded fields pinned.
+
+    ``metadata`` overrides keys of the recorded ``experiment_metadata``.
+    """
 
     document = json.loads(path.read_text())
     document.update(
@@ -44,6 +47,7 @@ def pinned(path, **fields):
                 **document["experiment_metadata"],
                 "prompts": {"relevance": "cd" * 32},
                 "selection": {"scope": "full"},
+                **(metadata or {}),
             },
             **fields,
         }
@@ -89,15 +93,17 @@ def test_one_axis_renders_its_headline_against_the_latest_comparable_run(tmp_pat
         "\n"
         "| metric | value | baseline value | change | scored / selected | aggregation |\n"
         "| --- | --- | --- | --- | --- | --- |\n"
-        "| relevant_f1 | 0.000 | 0.667 | -0.667 | 5/5 | pooled |\n"
-        "| relevant_precision | unavailable | 0.667 | unavailable | 5/5 | pooled |\n"
-        "| relevant_recall | 0.000 | 0.667 | -0.667 | 5/5 | pooled |\n"
-        "| accuracy | 0.400 | 0.600 | -0.200 | 5/5 | rate |\n"
-        "| true_positives | 0.000 | 0.400 | -0.400 | 5/5 | rate |\n"
-        "| false_positives | 0.000 | 0.200 | -0.200 | 5/5 | rate |\n"
-        "| false_negatives | 0.600 | 0.200 | +0.400 | 5/5 | rate |\n"
-        "| true_negatives | 0.400 | 0.200 | +0.200 | 5/5 | rate |\n"
-        "| execution_failure_rate | 0.000 | 0.000 | +0.000 | 5/5 | rate |\n"
+        "| relevant_f1 | 0.000 (0/3) | 0.667 (4/6) | -0.667 | 5/5 | pooled |\n"
+        "| relevant_precision | unavailable (0/0) | 0.667 (2/3) | unavailable "
+        "| 5/5 | pooled |\n"
+        "| relevant_recall | 0.000 (0/3) | 0.667 (2/3) | -0.667 | 5/5 | pooled |\n"
+        "| accuracy | 0.400 (2/5) | 0.600 (3/5) | -0.200 | 5/5 | rate |\n"
+        "| true_positives | 0.000 (0/5) | 0.400 (2/5) | -0.400 | 5/5 | rate |\n"
+        "| false_positives | 0.000 (0/5) | 0.200 (1/5) | -0.200 | 5/5 | rate |\n"
+        "| false_negatives | 0.600 (3/5) | 0.200 (1/5) | +0.400 | 5/5 | rate |\n"
+        "| true_negatives | 0.400 (2/5) | 0.200 (1/5) | +0.200 | 5/5 | rate |\n"
+        "| execution_failure_rate | 0.000 (0/5) | 0.000 (0/5) | +0.000 "
+        "| 5/5 | rate |\n"
         "\n"
         "- relevant_precision (pooled) is unavailable: "
         "no case contributed to the denominator\n"
@@ -168,7 +174,7 @@ NOT_COMPARED = "## relevance: relevant_f1 0.667 (no comparable baseline)"
         (
             {
                 "data_set_sha256": "00" * 32,
-                "experiment_metadata": {"headline_version": "relevance-v0"},
+                "metadata": {"headline_version": "relevance-v0"},
                 "dirty": True,
             },
             {},
@@ -184,10 +190,12 @@ NOT_COMPARED = "## relevance: relevant_f1 0.667 (no comparable baseline)"
 def test_baseline_line_names_the_comparison_status_and_what_qualifies_it(
     tmp_path, baseline_fields, current_fields, heading, baseline_line
 ):
-    baseline = pinned(run_relevance(tmp_path / "baseline", CONFUSION_CASES))
-    pinned(baseline, **baseline_fields)
-    current = pinned(run_relevance(tmp_path / "current", CONFUSION_CASES))
-    pinned(current, **current_fields)
+    baseline = pinned(
+        run_relevance(tmp_path / "baseline", CONFUSION_CASES), **baseline_fields
+    )
+    current = pinned(
+        run_relevance(tmp_path / "current", CONFUSION_CASES), **current_fields
+    )
 
     card = Scorecard.build([ReportDocument.load(current)], baseline=baseline)
 
@@ -204,6 +212,25 @@ def test_without_an_earlier_run_the_baseline_line_says_so(tmp_path):
     assert (rendered[0], rendered[4]) == (
         NOT_COMPARED,
         "Baseline: none (no earlier run).",
+    )
+
+
+def test_an_unavailable_primary_heading_gives_its_reason_not_a_change(tmp_path):
+    only_irrelevant = [(case_id, IRRELEVANT, IRRELEVANT) for case_id in ("a", "b")]
+    baseline = pinned(
+        run_relevance(tmp_path, only_irrelevant), ran_at="2026-10-01T12:00:00+00:00"
+    )
+    current = pinned(run_relevance(tmp_path, only_irrelevant))
+
+    card = Scorecard.build([ReportDocument.load(current)], baseline="auto")
+
+    rendered = markdown(card, baseline=baseline).splitlines()
+    assert (rendered[0], rendered[4]) == (
+        (
+            "## relevance: relevant_f1 unavailable "
+            "(no case contributed to the denominator)"
+        ),
+        "Baseline: `<baseline>` (comparable).",
     )
 
 

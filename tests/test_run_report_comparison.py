@@ -81,6 +81,8 @@ def test_comparable_baseline_states_each_primary_and_headline_change(tmp_path):
         "aggregation": "pooled",
         "value": pytest.approx(2 / 3),
         "baseline_value": pytest.approx(0.8),
+        "baseline_numerator": 4,
+        "baseline_denominator": 5,
         "change": pytest.approx(2 / 3 - 0.8),
     }
     assert changes["relevant_precision"]["change"] == pytest.approx(2 / 3 - 1)
