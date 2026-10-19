@@ -8,42 +8,25 @@ Report. No model is called.
 
 from __future__ import annotations
 
-import asyncio
 import json
 
 import pytest
-from engine_runs import headline_rows, headline_table, run_task
-from test_retrieval import COVERAGE, Branch, candidate, coordinator
+from engine_runs import headline_rows, headline_table
+from retrieval_runs import (
+    FULL_TEXT,
+    POPULATION,
+    SETTINGS,
+    assembled,
+    labels,
+    ranked,
+    run_retrieval,
+)
 
-from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.tasks.chat import ChatFailure
-from knowledge_map.evaluation.tasks.retrieval import (
-    EvidenceRequirement,
-    ReferenceAnswer,
-    RetrievalExpectation,
-    RetrievalOutput,
-)
-from knowledge_map.schemas.fusion import FusionConfig
-from knowledge_map.schemas.query_preparation import QueryRewrite, QuestionAssessment
-from knowledge_map.schemas.retrieval import (
-    EvidenceAssemblyFailure,
-    FailedBranch,
-    FusedCandidate,
-    RetrievalBranch,
-    RetrievalExecutionResult,
-    RetrievalRequest,
-    SkippedBranch,
-    SuccessfulBranch,
-)
+from knowledge_map.evaluation.tasks.retrieval import RetrievalOutput
+from knowledge_map.schemas.retrieval import RetrievalAnswer
 
-FULL_TEXT = RetrievalBranch.FULL_TEXT
-DENSE = RetrievalBranch.DENSE
-STRUCTURAL = RetrievalBranch.STRUCTURAL
-SETTINGS = {"fusion_settings": FusionConfig().model_dump(mode="json")}
 NO_DENOMINATOR = "no case contributed to the denominator"
-
-# Only these questions ask for the structural branch.
-RELATIONAL = {"partial"}
 
 
 @pytest.fixture(autouse=True)
@@ -51,127 +34,8 @@ def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
-def question(case_id):
-    return QueryRewrite(
-        question=f"Which organizations support {case_id}?",
-        relational=case_id in RELATIONAL,
-        assessment=QuestionAssessment(status="allowed"),
-    )
-
-
-def labels(*ids):
-    """Every reference ID is its own required evidence group."""
-
-    return RetrievalExpectation(
-        grain="article_chunk",
-        relevant_ids=ids,
-        answers=(
-            ReferenceAnswer(
-                groups=tuple(
-                    EvidenceRequirement(kind=f"hop-{i}", ids=(id,))
-                    for i, id in enumerate(ids)
-                )
-            ),
-        ),
-    )
-
-
-def fused(*chunks):
-    return tuple(
-        FusedCandidate(
-            chunk_id=chunk,
-            rank=rank,
-            fusion_score=1 / rank,
-            contributions=(candidate(FULL_TEXT, chunk=chunk, rank=rank),),
-        )
-        for rank, chunk in enumerate(chunks, 1)
-    )
-
-
-def ranked(branch, *chunks):
-    return tuple(
-        candidate(branch, chunk=chunk, rank=rank)
-        for rank, chunk in enumerate(chunks, 1)
-    )
-
-
-def assembled(case_id, full_text, dense):
-    """An Evidence Package whose selected passages are every branch candidate."""
-
-    branches = {
-        FULL_TEXT: Branch(FULL_TEXT, full_text),
-        DENSE: Branch(DENSE, dense),
-        STRUCTURAL: Branch(STRUCTURAL),
-    }
-    return asyncio.run(
-        coordinator(branches).run(
-            question(case_id),
-            coverage=COVERAGE,
-            relevant_collection_ids=("reporting",),
-        )
-    )
-
-
-def unassembled(case_id, *outcomes):
-    return EvidenceAssemblyFailure(
-        execution=RetrievalExecutionResult(
-            request=RetrievalRequest(rewrite=question(case_id)), outcomes=outcomes
-        )
-    )
-
-
-# Fusion found both references first, and both reached the final context.
-FOUND = (
-    "found",
-    labels("a", "b"),
-    RetrievalOutput(
-        result=assembled("found", ranked(FULL_TEXT, "a", "b"), ranked(DENSE, "b")),
-        fused=fused("a", "b"),
-        settings=SETTINGS,
-    ),
-)
-# A relational question: fusion found one of two references second, and the
-# dense and structural branches failed before Evidence Assembly failed.
-PARTIAL = (
-    "partial",
-    labels("c", "d"),
-    RetrievalOutput(
-        result=unassembled(
-            "partial",
-            SuccessfulBranch(branch=FULL_TEXT, candidates=ranked(FULL_TEXT, "c")),
-            FailedBranch(branch=DENSE),
-            FailedBranch(branch=STRUCTURAL),
-        ),
-        fused=fused("noise", "c"),
-        settings=SETTINGS,
-    ),
-)
-# Every branch completed and retrieved nothing.
-NOTHING_RETRIEVED = (
-    "nothing-retrieved",
-    labels("e"),
-    RetrievalOutput(
-        result=unassembled(
-            "nothing-retrieved",
-            SuccessfulBranch(branch=FULL_TEXT, candidates=()),
-            SuccessfulBranch(branch=DENSE, candidates=()),
-            SkippedBranch(),
-        ),
-        settings=SETTINGS,
-    ),
-)
-POPULATION = [FOUND, PARTIAL, NOTHING_RETRIEVED]
-
-
 def saved_run(directory, cases):
-    path = run_task(
-        directory,
-        "retrieval",
-        cases,
-        task_input=question,
-        label_quality=LabelQuality.SILVER,
-    )
-    return json.loads(path.read_text())
+    return json.loads(run_retrieval(directory, cases).read_text())
 
 
 def test_compacted_run_keeps_fused_recall_at_10_first_with_its_headline_rows(
@@ -184,10 +48,12 @@ def test_compacted_run_keeps_fused_recall_at_10_first_with_its_headline_rows(
     assert "fused" not in document["report"]["cases"][0]["output"]
     # Found: fused recall 1 at 5 and 10, rank 1, complete; context has a, b.
     # Partial: fused recall 1/2, rank 2, incomplete; no context.  Nothing
-    # retrieved: all zero.  The table holds outcomes only: no branch rows and
-    # no diagnostic rows.
+    # retrieved: all zero.  Only Found rendered an answer; the two failed
+    # Evidence Assemblies are neither answers nor execution failures.  The
+    # table holds outcomes only: no branch rows and no diagnostic rows.
     assert headline_table(document) == [
         ["fused_recall_at_10", "primary", 0.5, 1.5, 3.0, "per_case_mean", 3, 3, None],
+        ["completed_answer_rate", "headline", 1 / 3, 1.0, 3.0, "rate", 3, 3, None],
         ["fused_recall_at_5", "headline", 0.5, 1.5, 3.0, "per_case_mean", 3, 3, None],
         [
             "fused_reciprocal_rank",
@@ -228,26 +94,43 @@ def test_compacted_run_keeps_fused_recall_at_10_first_with_its_headline_rows(
     assert document["experiment_metadata"]["headline_version"] == "retrieval-v1"
 
 
-STARTUP_FAILURE = RetrievalOutput(
-    failure=ChatFailure(
-        stage="startup",
-        kind="execution",
-        exception_type="RuntimeError",
-        diagnostic="RAG evaluation could not complete startup.",
+def failed_at(stage, **fields):
+    return RetrievalOutput(
+        failure=ChatFailure(
+            stage=stage,
+            kind="execution",
+            exception_type="RuntimeError",
+            diagnostic=f"RAG evaluation could not complete {stage}.",
+        ),
+        **fields,
     )
-)
 
 
-def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
+STARTUP_FAILURE = failed_at("startup")
+
+
+def test_failed_cases_complete_the_run_and_count_only_in_operational_rows(
     tmp_path,
 ):
     clean = headline_rows(saved_run(tmp_path / "clean", POPULATION))
+    package = assembled("unrendered", ranked(FULL_TEXT, "a"), ())
     document = saved_run(
         tmp_path / "with-failures",
         [
             *POPULATION,
             ("raised", labels("a"), RuntimeError("transport exhausted")),
             ("recorded", labels("a"), STARTUP_FAILURE),
+            # The Chat Agent answered, but no Source Guide was rendered.
+            (
+                "unrendered",
+                labels("a"),
+                failed_at(
+                    "rendering",
+                    result=package,
+                    answer=RetrievalAnswer(evidence=package, introduction=None),
+                    settings=SETTINGS,
+                ),
+            ),
         ],
     )
 
@@ -258,21 +141,32 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     )
     assert recorded["scores"]["fused_recall_at_10"]["value"] == 0
     rows = headline_rows(document)
-    assert rows.pop(("execution_failure_rate", "rate")) == {
-        "metric": "execution_failure_rate",
+    operational = {
         "role": "headline",
-        "value": 2 / 5,
-        "numerator": 2.0,
-        "denominator": 5.0,
+        "denominator": 6.0,
         "aggregation": "rate",
-        "scored_cases": 5,
-        "selected_cases": 5,
+        "scored_cases": 6,
+        "selected_cases": 6,
         "unavailable_reason": None,
     }
+    assert rows.pop(("execution_failure_rate", "rate")) == {
+        "metric": "execution_failure_rate",
+        "value": 3 / 6,
+        "numerator": 3.0,
+        **operational,
+    }
+    # Only Found rendered an answer; an answer left unrendered is not one.
+    assert rows.pop(("completed_answer_rate", "rate")) == {
+        "metric": "completed_answer_rate",
+        "value": 1 / 6,
+        "numerator": 1.0,
+        **operational,
+    }
     del clean[("execution_failure_rate", "rate")]
+    del clean[("completed_answer_rate", "rate")]
     # Every quality row reads exactly as it did without the failures, over
     # the larger run population.
-    assert {key: {**row, "selected_cases": 5} for key, row in clean.items()} == rows
+    assert {key: {**row, "selected_cases": 6} for key, row in clean.items()} == rows
 
 
 class UnreadableOutput(dict):

@@ -349,7 +349,7 @@ class ChatCaseLifecycle(EvaluationCaseLifecycle):
         return ctx
 
 
-def _completed_answer(case: ReportCase | ReportCaseFailure) -> bool:
+def completed_answer(case: ReportCase | ReportCaseFailure) -> bool:
     """A rendered Source Guide built on a guidance answer, whatever its introduction.
 
     Failed Evidence Assembly is not an answer.  An answer whose introduction is
@@ -393,7 +393,7 @@ CHAT_HEADLINE = HeadlineDefinition(
             role=Role.PRIMARY,
             reason="Unlabeled Set: no quality metric",
         ),
-        Rate.operational("completed_answer_rate", _completed_answer, Role.HEADLINE),
+        Rate.operational("completed_answer_rate", completed_answer, Role.HEADLINE),
         Rate.operational("declined_rate", _question_status("declined"), Role.HEADLINE),
         Rate.operational("deferred_rate", _question_status("deferred"), Role.HEADLINE),
         Rate.operational(

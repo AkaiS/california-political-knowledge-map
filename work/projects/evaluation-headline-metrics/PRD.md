@@ -357,7 +357,7 @@ Error analysis finds where a run broke.
 | Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | none |
 | Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
 | Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
-| Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence | none |
+| Retrieval | Silver | fused Recall@10 (per-case mean) | completed-answer rate, by the rule Chat uses; fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence | none |
 | Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; Declined, Deferred and needs-edit rates; p50 and p95 task duration | none |
 
 Every task's headline rows also include `execution_failure_rate`, which the

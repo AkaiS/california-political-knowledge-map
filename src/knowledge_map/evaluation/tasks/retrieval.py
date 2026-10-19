@@ -32,9 +32,14 @@ from knowledge_map.schemas.retrieval import (
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
-from ..headline import CaseMean, HeadlineDefinition, Role
+from ..headline import CaseMean, HeadlineDefinition, Rate, Role
 from ..retrieval_report import METRIC_VERSION
-from .chat import ChatFailure, capture_messages, chat_stage_observations
+from .chat import (
+    ChatFailure,
+    capture_messages,
+    chat_stage_observations,
+    completed_answer,
+)
 from .registry import EvaluationTask, register
 
 type Ids = Annotated[tuple[NonemptyText, ...], Field(min_length=1)]
@@ -326,6 +331,7 @@ RETRIEVAL_HEADLINE = HeadlineDefinition(
     version=HEADLINE_VERSIONS[METRIC_VERSION],
     measures=(
         CaseMean(score="fused_recall_at_10", role=Role.PRIMARY),
+        Rate.operational("completed_answer_rate", completed_answer, Role.HEADLINE),
         CaseMean(score="fused_recall_at_5", role=Role.HEADLINE),
         CaseMean(score="fused_reciprocal_rank", role=Role.HEADLINE),
         CaseMean(score="fused_complete_evidence_at_10", role=Role.HEADLINE),

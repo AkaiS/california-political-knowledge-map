@@ -20,6 +20,7 @@ from chat_runs import (
     run_chat,
 )
 from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
+from retrieval_runs import POPULATION, run_retrieval
 
 from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
 
@@ -255,6 +256,19 @@ def test_chat_answers_and_declines_are_counted_from_the_recorded_headline(tmp_pa
     rewritten.write_text(json.dumps(document))
     counts = scorecard(rewritten).to_json()["counts"]
     assert (counts["completed_answers"], counts["declined"]) == (2, 2)
+
+
+def test_retrieval_completed_answers_are_counted_from_the_recorded_headline(
+    tmp_path,
+):
+    # One question was answered; two ended at a failed Evidence Assembly.
+    card = scorecard(run_retrieval(tmp_path, POPULATION))
+    summary = card.to_json()
+
+    assert summary["headline"]["version"] == "retrieval-v1"
+    assert summary["counts"]["completed_answers"] == 1
+    assert summary["counts"]["execution_failures"] == 0
+    assert card.exit_code == 0
 
 
 def test_summary_detects_duplicate_and_unexpected_ids(tmp_path):

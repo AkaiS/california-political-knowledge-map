@@ -15,6 +15,7 @@ Labels: completed
 - [x] The primary row is fused Recall@10, as a `CaseMean` of the recorded
   score.
 - [x] The headline rows are:
+  - the completed-answer rate, by the rule Chat uses;
   - fused Recall@5;
   - fused reciprocal rank;
   - fused complete evidence@10;
@@ -51,3 +52,12 @@ Labels: completed
   Precision@k diagnostic row, and the unavailable NDCG@10 row are gone. No
   real run had recorded `retrieval-v1`, so the version name stays. The RAG
   reviewer's case-level branch views are unchanged and serve error analysis.
+- 2026-10-19, user decision after ticket 06: every end-to-end run ends in a
+  plain pass/fail. Ticket 06 moved the completed-answer rule from the summary
+  script into Chat's headline, which left a retrieval run's summary with
+  `completed_answers: null`. `retrieval-v1` now records
+  `completed_answer_rate` right after the primary row, as an operational rate
+  by the same rule Chat uses, shared rather than copied. It is not the
+  complement of `execution_failure_rate`: a question whose Evidence Assembly
+  failed is neither a failed case nor an answer. No real run had recorded
+  `retrieval-v1`, so the version name stays.
