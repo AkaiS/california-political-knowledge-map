@@ -307,6 +307,9 @@ class Axis(BaseModel, frozen=True):
         headline, summary = self.headline, self.summary
         counts = summary["counts"]
         label_quality, status = self._label_quality(), self._status()
+        # Every axis states the run's own population, the counts its
+        # "Population:" line gives, whatever its primary row measured.
+        population = f"{counts['scored']}/{counts['selected']}"
         if isinstance(headline, NoHeadline):
             return (
                 summary["task"],
@@ -314,7 +317,7 @@ class Axis(BaseModel, frozen=True):
                 "-",
                 f"no Headline Metrics ({headline.reason})",
                 "-",
-                f"{counts['scored']}/{counts['selected']}",
+                population,
                 "-",
                 status,
             )
@@ -334,7 +337,7 @@ class Axis(BaseModel, frozen=True):
             primary.metric,
             value,
             _change_cells(change)[1],
-            f"{primary.scored_cases}/{primary.selected_cases}",
+            population,
             "-" if failures is None else _row_value(failures),
             status,
         )

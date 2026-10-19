@@ -51,3 +51,12 @@ Labels: completed
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test
   seam.
+
+## Comments
+
+- 2026-10-19, user decision: the multi-axis summary table's "scored /
+  selected" cell gives the run's own counts for every axis (cases that
+  succeeded, out of cases selected), the same `scored` and `selected` counts
+  as the axis's "Population:" line. It no longer reads the primary row's
+  `scored_cases`, so chat shows 2/3 rather than 0/3. The one-axis table's
+  per-row "scored / selected" column is unchanged.

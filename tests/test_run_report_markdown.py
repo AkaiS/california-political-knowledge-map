@@ -311,7 +311,7 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
         "| relevance | gold | relevant_f1 | 0.000 (0/3) | -0.667 | 5/5 | 0.000 "
         "(0/5) | comparable |\n"
-        "| chat | unlabeled | answer_quality | no quality metric | - | 0/3 "
+        "| chat | unlabeled | answer_quality | no quality metric | - | 2/3 "
         "| 0.333 (1/3) | no earlier run |\n"
         "| extraction | silver | node_f1 | unavailable (no case contributed to "
         "the denominator) | - | 1/1 | 0.000 (0/1) | no earlier run |\n"
