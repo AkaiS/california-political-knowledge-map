@@ -11,7 +11,7 @@ import hashlib
 import json
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -148,17 +148,26 @@ def resolve_plan(
 
 
 def summarize_report(
-    path: Path, *, reviewer_port: int = DEFAULT_REVIEWER_PORT
+    path: Path,
+    *,
+    baseline: Literal["auto", "none"] | Path = "auto",
+    reviewer_port: int = DEFAULT_REVIEWER_PORT,
 ) -> Scorecard:
     """A planned run's single-axis Scorecard."""
     return Scorecard.build(
         [ReportDocument.load(path)],
-        baseline="none",
+        baseline=baseline,
         reviewer_port=reviewer_port,
     )
 
 
-def execute_plan(plan: dict[str, Any]) -> tuple[dict[str, Any] | None, int]:
+def _baseline(value: str) -> Literal["auto", "none"] | Path:
+    return value if value in ("auto", "none") else Path(value)
+
+
+def execute_plan(
+    plan: dict[str, Any], *, baseline: Literal["auto", "none"] | Path = "auto"
+) -> tuple[dict[str, Any] | None, int]:
     path = Path(plan["data_set"])
     if _sha256(path) != plan["data_set_sha256"]:
         raise ValueError(
@@ -205,7 +214,9 @@ def execute_plan(plan: dict[str, Any]) -> tuple[dict[str, Any] | None, int]:
         exit_code = 1
     if not written:
         return None, exit_code or 1
-    scorecard = summarize_report(written[-1], reviewer_port=plan["reviewer_port"])
+    scorecard = summarize_report(
+        written[-1], baseline=baseline, reviewer_port=plan["reviewer_port"]
+    )
     return scorecard.to_json(), exit_code or scorecard.exit_code
 
 
@@ -233,6 +244,13 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_REVIEWER_PORT,
         help="Port for the exact report reviewer link and command (server status is unverified)",
     )
+    parser.add_argument(
+        "--baseline",
+        type=_baseline,
+        default="auto",
+        metavar="auto|PATH|none",
+        help="Report to compare against; auto picks the newest earlier Comparable Run (default: auto)",
+    )
     parser.add_argument("--max-concurrency", type=int, default=1)
     parser.add_argument(
         "--plan",
@@ -249,7 +267,9 @@ def main(argv: list[str] | None = None) -> int:
                 "--report summarizes a saved attempt; provide no selection arguments"
             )
         try:
-            scorecard = summarize_report(args.report, reviewer_port=args.reviewer_port)
+            scorecard = summarize_report(
+                args.report, baseline=args.baseline, reviewer_port=args.reviewer_port
+            )
         except ValueError as error:
             parser.error(str(error))
         print(json.dumps(scorecard.to_json(), indent=2, sort_keys=True))
@@ -272,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({"evaluation_plan": plan}, indent=2, sort_keys=True), flush=True)
     if args.plan:
         return 0
-    summary, exit_code = execute_plan(plan)
+    summary, exit_code = execute_plan(plan, baseline=args.baseline)
     if summary is not None:
         print(
             json.dumps({"evaluation_summary": summary}, indent=2, sort_keys=True),

@@ -12,6 +12,7 @@ import json
 import shlex
 from collections import Counter, defaultdict
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 from statistics import fmean
 from typing import Any, Literal
@@ -73,7 +74,11 @@ class Comparison(BaseModel, frozen=True):
 
     baseline: str | None = None
     status: Literal[
-        "not_requested", "comparable", "comparable_with_caveat", "not_comparable"
+        "not_requested",
+        "no_earlier_run",
+        "comparable",
+        "comparable_with_caveat",
+        "not_comparable",
     ] = "not_requested"
     failed_conditions: tuple[
         Literal[
@@ -229,7 +234,7 @@ class Scorecard(BaseModel, frozen=True):
     def build(
         cls,
         documents: Sequence[ReportDocument],
-        baseline: Literal["none"] | Path,
+        baseline: Literal["auto", "none"] | Path,
         *,
         reviewer_port: int = DEFAULT_REVIEWER_PORT,
     ) -> Scorecard:
@@ -249,6 +254,13 @@ class Scorecard(BaseModel, frozen=True):
                 )
                 for document, axis in zip(documents, axes, strict=True)
             )
+        elif baseline == "auto":
+            axes = tuple(
+                axis.model_copy(
+                    update={"comparison": _automatic(document, axis, reviewer_port)}
+                )
+                for document, axis in zip(documents, axes, strict=True)
+            )
         elif baseline != "none":
             raise ValueError(f"unsupported baseline {baseline!r}")
         return cls(axes=axes)
@@ -265,6 +277,44 @@ class Scorecard(BaseModel, frozen=True):
         """Nonzero when any axis is incomplete or has failures or evaluator errors."""
 
         return 1 if any(axis.failed for axis in self.axes) else 0
+
+
+def _automatic(document: ReportDocument, axis: Axis, reviewer_port: int) -> Comparison:
+    """Compare against the newest earlier Comparable Run beside ``document``."""
+
+    ran_at = _ran_at(document)
+    earlier: list[tuple[datetime, ReportDocument]] = []
+    for path in document.path.parent.glob("*.json") if ran_at else ():
+        try:
+            candidate = ReportDocument.load(path)
+        except ValueError:
+            continue
+        when = _ran_at(candidate)
+        if (
+            candidate.content["task"] == document.content["task"]
+            and when is not None
+            and when < ran_at
+        ):
+            earlier.append((when, candidate))
+    newest: Comparison | None = None
+    for _, candidate in sorted(earlier, key=lambda pair: pair[0], reverse=True):
+        comparison = Comparison.between(
+            document, axis, candidate, _axis(candidate, reviewer_port)
+        )
+        if comparison.status != "not_comparable":
+            return comparison
+        newest = newest or comparison
+    return newest or Comparison(status="no_earlier_run")
+
+
+def _ran_at(document: ReportDocument) -> datetime | None:
+    try:
+        when = datetime.fromisoformat(document.content.get("ran_at"))
+    except (TypeError, ValueError):
+        return None
+    # Every report records an aware UTC time; a naive one can't be ordered
+    # against it.
+    return when if when.tzinfo is not None else None
 
 
 def _axis(document: ReportDocument, reviewer_port: int) -> Axis:

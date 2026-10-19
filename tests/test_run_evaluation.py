@@ -107,7 +107,7 @@ def test_report_prints_the_scorecard_json_and_exits_with_its_exit_code(
         },
     }
     path = _saved(tmp_path, document)
-    expected = Scorecard.build([ReportDocument.load(path)], baseline="none")
+    expected = Scorecard.build([ReportDocument.load(path)], baseline="auto")
 
     code = runner.main(["--report", str(path)])
 

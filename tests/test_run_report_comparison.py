@@ -1,4 +1,4 @@
-"""A scorecard compares a report against an explicit baseline report.
+"""A scorecard compares a report against an explicit or automatic baseline.
 
 Every test saves Evaluation Reports through an engine run, varies a saved
 copy's metadata where a condition needs it, builds a ``Scorecard`` from
@@ -326,6 +326,95 @@ def test_diagnostic_rows_have_no_change(tmp_path):
         for row in rows
         if row["role"] != "diagnostic"
     ]
+
+
+def on_day(directory, day, cases=CONFUSION_CASES, **fields):
+    """A saved relevance run in ``directory`` that ran on October ``day``."""
+
+    return run(directory, cases, ran_at=f"2026-10-{day:02d}T12:00:00+00:00", **fields)
+
+
+def automatic(current):
+    return compared(current, "auto")
+
+
+def test_auto_prefers_a_newer_dirty_comparable_run_over_an_older_clean_one(
+    tmp_path,
+):
+    on_day(tmp_path, 1, BETTER_CASES)
+    newer_dirty = on_day(tmp_path, 2, NOTHING_RELEVANT, dirty=True)
+    current = on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison["baseline"] == str(newer_dirty.resolve())
+    assert comparison["status"] == "comparable_with_caveat"
+    assert comparison["dirty_worktree"] == ["baseline"]
+    assert comparison["changes"][0]["baseline_value"] == 0
+
+
+def test_auto_never_chooses_a_later_report(tmp_path):
+    earlier = on_day(tmp_path, 1, BETTER_CASES)
+    current = on_day(tmp_path, 2)
+    on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison["baseline"] == str(earlier.resolve())
+    assert comparison["status"] == "comparable"
+
+
+def test_auto_skips_a_newer_run_that_is_not_comparable(tmp_path):
+    comparable = on_day(tmp_path, 1, BETTER_CASES)
+    on_day(tmp_path, 2, data_set_sha256="0" * 64)
+    current = on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison["baseline"] == str(comparable.resolve())
+    assert comparison["status"] == "comparable"
+
+
+def test_without_a_comparable_run_auto_carries_the_newest_runs_failed_conditions(
+    tmp_path,
+):
+    on_day(tmp_path, 1, CONFUSION_CASES[:4])
+    newest = on_day(tmp_path, 2, data_set_sha256="0" * 64, dirty=True)
+    current = on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison == {
+        "baseline": str(newest.resolve()),
+        "status": "not_comparable",
+        "failed_conditions": ["data_set_revision"],
+        "dirty_worktree": ["baseline"],
+        "changes": [],
+    }
+
+
+def test_auto_without_an_earlier_run_says_so(tmp_path):
+    current = on_day(tmp_path, 2)
+    on_day(tmp_path, 3)
+
+    assert automatic(current) == {
+        "baseline": None,
+        "status": "no_earlier_run",
+        "failed_conditions": [],
+        "dirty_worktree": [],
+        "changes": [],
+    }
+
+
+def test_auto_ignores_reports_of_other_tasks_beside_the_current_one(tmp_path):
+    same_task = on_day(tmp_path, 1, data_set_sha256="0" * 64)
+    on_day(tmp_path, 2, task="coreference")
+    current = on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison["baseline"] == str(same_task.resolve())
+    assert comparison["failed_conditions"] == ["data_set_revision"]
 
 
 def test_no_baseline_requests_no_comparison(tmp_path):
