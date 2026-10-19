@@ -324,9 +324,8 @@ class RetrievedReferenceEvidence(Evaluator):
 # version fails here until a headline version is added for it.
 HEADLINE_VERSIONS = {"unique-chunk-budget-v2": "retrieval-v1"}
 
-# Each question is one information need, so every row is a per-question mean.
-# The rows are outcomes a reader would observe; branch breakdowns stay in the
-# RAG reviewer's case views.
+# Each question is one information need, so every quality row is a
+# per-question mean.
 RETRIEVAL_HEADLINE = HeadlineDefinition(
     version=HEADLINE_VERSIONS[METRIC_VERSION],
     measures=(

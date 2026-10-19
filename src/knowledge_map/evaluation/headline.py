@@ -342,7 +342,7 @@ class SetAgreement(Measure, frozen=True):
 
     @model_validator(mode="after")
     def _names_every_row(self) -> SetAgreement:
-        if set(self.roles) != {"precision", "recall", "f1"}:
+        if set(self.roles) != set(_SET_AGREEMENT):
             raise ValueError("set agreement assigns a role to precision, recall and f1")
         return self
 

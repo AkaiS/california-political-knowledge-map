@@ -364,65 +364,50 @@ class RejectedOnlyTheWrongMentionSpans(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        decisions = _critic_decisions(ctx)
-        return {
-            name: numerator / denominator
-            for name, (numerator, denominator) in decisions.items()
-        } or UNSCORED
+        silver = entity_by_identity(ctx.expected_output.mention_spans)
 
-
-_REJECTION_PRECISION = "critic_rejection_precision"
-_REJECTION_RECALL = "critic_rejection_recall"
-_KEPT_CORRECT_SPANS = "critic_kept_correct_spans"
-
-
-def _critic_decisions(case: EvaluatorContext) -> dict[str, tuple[int, int]]:
-    """Each Critic score's numerator and denominator over the judged decisions.
-
-    A score is absent when the case had no decision it could be judged on.
-    """
-
-    silver = entity_by_identity(case.expected_output.mention_spans)
-
-    # (the span was correct, the Critic rejected it)
-    judged: list[tuple[bool, bool]] = []
-    for outcome in case.output.outcomes:
-        if outcome.stage != "critic":
-            continue
-        expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
-        if expected_entity is None:
-            continue
-        judged.append(
-            (
-                expected_entity
-                == normalize_entity_name(outcome.mention_span.canonical_entity_name),
-                outcome.outcome == "rejected",
+        # (the span was correct, the Critic rejected it)
+        judged: list[tuple[bool, bool]] = []
+        for outcome in ctx.output.outcomes:
+            if outcome.stage != "critic":
+                continue
+            expected_entity = silver.get(MentionSpanIdentity.of(outcome.mention_span))
+            if expected_entity is None:
+                continue
+            judged.append(
+                (
+                    expected_entity
+                    == normalize_entity_name(
+                        outcome.mention_span.canonical_entity_name
+                    ),
+                    outcome.outcome == "rejected",
+                )
             )
-        )
 
-    rejected = [correct for correct, was_rejected in judged if was_rejected]
-    wrong = [was_rejected for correct, was_rejected in judged if not correct]
-    right = [was_rejected for correct, was_rejected in judged if correct]
+        if not judged:
+            return UNSCORED
 
-    fractions: dict[str, tuple[int, int]] = {}
-    if rejected:
-        # Of what it threw away, how much deserved it.
-        fractions[_REJECTION_PRECISION] = (
-            sum(not correct for correct in rejected),
-            len(rejected),
-        )
-    if wrong:
-        # Of the mistakes it was shown, how many it caught.
-        fractions[_REJECTION_RECALL] = (sum(wrong), len(wrong))
-    if right:
-        # Of the correct spans it was shown, how many it left alone.
-        # The complement of a false-rejection rate, so that higher is
-        # better here as everywhere else in the report.
-        fractions[_KEPT_CORRECT_SPANS] = (
-            sum(not was_rejected for was_rejected in right),
-            len(right),
-        )
-    return fractions
+        rejected = [correct for correct, was_rejected in judged if was_rejected]
+        wrong = [was_rejected for correct, was_rejected in judged if not correct]
+        right = [was_rejected for correct, was_rejected in judged if correct]
+
+        scores: dict[str, float] = {}
+        if rejected:
+            # Of what it threw away, how much deserved it.
+            scores["critic_rejection_precision"] = sum(
+                not correct for correct in rejected
+            ) / len(rejected)
+        if wrong:
+            # Of the mistakes it was shown, how many it caught.
+            scores["critic_rejection_recall"] = sum(wrong) / len(wrong)
+        if right:
+            # Of the correct spans it was shown, how many it left alone.
+            # The complement of a false-rejection rate, so that higher is
+            # better here as everywhere else in the report.
+            scores["critic_kept_correct_spans"] = sum(
+                not was_rejected for was_rejected in right
+            ) / len(right)
+        return scores or UNSCORED
 
 
 def _span_counts(case: ReportCase) -> Counts:
