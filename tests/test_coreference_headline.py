@@ -67,9 +67,7 @@ def saved_run(directory, task_name, cases):
 
 # Merged: the model found three of silver's four mentions and one spurious
 # one, and put Atkins in Newsom's cluster.  Over the three shared mentions B³
-# precision is (2/3 + 1/3 + 2/3) / 3 and recall is (1 + 1 + 1) / 3.  The
-# Critic kept two correct spans and the wrong "she", and rejected the wrong
-# "it"; its verdict on the spurious "they" is not judged.
+# precision is (2/3 + 1/3 + 2/3) / 3 and recall is (1 + 1 + 1) / 3.
 HE = span("1", "he", "Gavin Newsom")
 SHE = span("2", "she", "Toni Atkins")
 GOVERNOR = span("3", "the governor", "Gavin Newsom")
@@ -97,8 +95,8 @@ MERGED = (
     ),
 )
 # Split: the model found both mentions of SB 1 but named the second
-# "Senate Bill 1", splitting one cluster in two, and the Critic rejected a
-# correct "he".  B³ precision is (1 + 1) / 2 and recall (1/2 + 1/2) / 2.
+# "Senate Bill 1", splitting one cluster in two.  B³ precision is (1 + 1) / 2
+# and recall (1/2 + 1/2) / 2.
 BILL = span("2", "the bill", "SB 1")
 SPLIT = (
     "split",
@@ -179,8 +177,7 @@ def test_both_tasks_record_pooled_span_f1_first_and_the_same_agreement_rows(
 ):
     document = saved_run(tmp_path, task_name, [MERGED, SPLIT, NOTHING_SHARED])
 
-    # The Critic is a stage inside the loop, so neither table has a row for
-    # its decisions, and neither has diagnostic rows.
+    # Neither table has a Critic row or any diagnostic row.
     assert headline_table(document) == AGREEMENT_ROWS
     assert document["experiment_metadata"]["headline_version"] == version
 

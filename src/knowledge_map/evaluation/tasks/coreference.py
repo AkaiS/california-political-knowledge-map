@@ -454,8 +454,6 @@ AGREEMENT_MEASURES: tuple[Measure, ...] = (
     CaseMean(score="span_f1", role=Role.HEADLINE),
 )
 
-#: The Critic is a stage inside the loop, so its decisions stay in the case
-#: scores for error analysis rather than in the headline.
 COREFERENCE_HEADLINE = HeadlineDefinition(
     version="coreference-v1", measures=AGREEMENT_MEASURES
 )
