@@ -9,6 +9,8 @@ that table only through ``Headline.from_analyses``.
 
 from __future__ import annotations
 
+import math
+import statistics
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
@@ -33,6 +35,7 @@ __all__ = [
     "Measure",
     "PerLabel",
     "Pooled",
+    "Quantile",
     "Rate",
     "Role",
     "SetAgreement",
@@ -55,6 +58,7 @@ COLUMNS = (
     "unavailable_reason",
 )
 ZERO_DENOMINATOR = "no case contributed to the denominator"
+NO_SUCCEEDED_CASE = "no case succeeded"
 
 
 class Role(StrEnum):
@@ -539,6 +543,61 @@ class Rate(Measure, frozen=True):
                 len(cases),
                 scored_cases=len(cases),
                 population=population,
+            ),
+        )
+
+
+class Quantile(Measure, frozen=True):
+    """The ``q`` quantile of one value each succeeded case contributes.
+
+    Interpolates linearly between the nearest values, as the ``inclusive``
+    method of ``statistics.quantiles`` does, so ``q`` is a whole percentile.
+    A quantile has no numerator or denominator; its scored count is the
+    succeeded cases it was taken over.
+    """
+
+    metric: str
+    q: float
+    of: Callable[[ReportCase], float]
+    role: Role
+
+    @property
+    def _percentile(self) -> int:
+        return round(self.q * 100)
+
+    @model_validator(mode="after")
+    def _is_a_whole_percentile(self) -> Quantile:
+        if not (
+            1 <= self._percentile <= 99 and math.isclose(self.q * 100, self._percentile)
+        ):
+            raise ValueError(
+                f"{self.metric}: q is a whole percentile from 0.01 to 0.99"
+            )
+        return self
+
+    def _declared(self) -> tuple[tuple[str, Role], ...]:
+        return ((self.metric, self.role),)
+
+    def _rows(self, population: _Population) -> tuple[HeadlineRow, ...]:
+        values = [float(self.of(case)) for case in population.succeeded]
+        value = (
+            statistics.quantiles(values, n=100, method="inclusive")[
+                self._percentile - 1
+            ]
+            if values
+            else None
+        )
+        return (
+            HeadlineRow(
+                metric=self.metric,
+                role=self.role,
+                aggregation=Aggregation.QUANTILE,
+                value=value,
+                numerator=None,
+                denominator=None,
+                scored_cases=len(values),
+                selected_cases=len(population.everyone),
+                unavailable_reason=None if values else NO_SUCCEEDED_CASE,
             ),
         )
 
