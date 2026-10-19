@@ -46,8 +46,8 @@ Labels: completed
 ## Comments
 
 - 2026-10-19, user decision during ticket 06: headline tables record only
-  outcomes a user would observe, never pipeline structure. retrieval-v1 was
+  outcomes a user would observe, never pipeline structure. `retrieval-v1` was
   trimmed in place: each branch's completion rate, every per-branch and
   Precision@k diagnostic row, and the unavailable NDCG@10 row are gone. No
-  real run had recorded retrieval-v1, so the version name stays. The RAG
+  real run had recorded `retrieval-v1`, so the version name stays. The RAG
   reviewer's case-level branch views are unchanged and serve error analysis.

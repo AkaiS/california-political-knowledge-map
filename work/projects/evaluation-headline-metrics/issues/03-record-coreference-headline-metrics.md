@@ -41,8 +41,8 @@ Labels: completed
 
 - 2026-10-19, user decision during ticket 06: headline tables record only
   outcomes a user would observe, never pipeline structure. The Coreference
-  Critic is a stage inside the loop, so coreference-v1 lost its three Critic
-  diagnostic rows and coreference_annotator-v1 lost the matching
+  Critic is a stage inside the loop, so `coreference-v1` lost its three Critic
+  diagnostic rows and `coreference_annotator-v1` lost the matching
   `Unavailable` rows. No real run had recorded either version, so the version
   names stay. The per-case Critic scores the case evaluators record are
   unchanged and serve error analysis.
