@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import shlex
 from collections import Counter, defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
 from statistics import fmean
@@ -28,6 +28,7 @@ REVIEWER_SCRIPT = (
     Path(__file__).resolve().parents[3] / "scripts" / "review_chat_eval.py"
 )
 DEFAULT_REVIEWER_PORT = 8766
+DIGEST_PREFIX = 12
 Baseline = Literal["auto", "none"] | Path
 
 
@@ -225,6 +226,168 @@ class Axis(BaseModel, frozen=True):
             "comparison": self.comparison.model_dump(mode="json"),
         }
 
+    def to_markdown(self) -> str:
+        headline, summary = self.headline, self.summary
+        counts, provenance = summary["counts"], summary["provenance"]
+        parts = [
+            f"## {summary['task']}: {self._result()}",
+            (
+                f"Population: label quality {provenance['label_quality'] or 'unknown'}, "
+                f"selection scope {summary['scope']}; {counts['selected']} selected, "
+                f"{counts['scored']} scored, {counts['execution_failures']} failed, "
+                f"{counts['unresolved']} unresolved."
+            ),
+            f"Baseline: {self._baseline()}.",
+        ]
+        diagnostic: tuple[HeadlineRow, ...] = ()
+        if isinstance(headline, NoHeadline):
+            parts.append(f"No Headline Metrics: {headline.reason}.")
+        else:
+            rows = (*headline.by_role(Role.PRIMARY), *headline.by_role(Role.HEADLINE))
+            diagnostic = headline.by_role(Role.DIAGNOSTIC)
+            changes = {
+                (change.metric, change.aggregation): change
+                for change in self.comparison.changes
+            }
+            parts.append(
+                _table(
+                    rows,
+                    ("baseline value", "change"),
+                    lambda row: _change_cells(
+                        changes.get((row.metric, row.aggregation))
+                    ),
+                )
+            )
+            parts.extend(_unavailable(rows))
+        parts.append(f"Provenance: {self._provenance()}.")
+        if diagnostic:
+            parts.append(
+                "\n\n".join(
+                    (
+                        "<details>\n<summary>Diagnostic rows</summary>",
+                        _table(diagnostic),
+                        *_unavailable(diagnostic),
+                        "</details>",
+                    )
+                )
+            )
+        return "\n\n".join(parts) + "\n"
+
+    def _result(self) -> str:
+        headline = self.headline
+        if isinstance(headline, NoHeadline):
+            return "no Headline Metrics"
+        primary = headline.primary
+        changes = self.comparison.changes
+        against = (
+            "no comparable baseline"
+            if not changes
+            else f"{_number(changes[0].change, signed=True)} against the baseline"
+        )
+        return f"{primary.metric} {_number(primary.value)} ({against})"
+
+    def _baseline(self) -> str:
+        comparison = self.comparison
+        if comparison.baseline is None:
+            return f"none ({comparison.status.replace('_', ' ')})"
+        status = {
+            "comparable": "comparable",
+            "comparable_with_caveat": "comparable with caveat",
+            "not_comparable": "not comparable",
+        }[comparison.status]
+        notes = []
+        if comparison.failed_conditions:
+            notes.append("failed " + ", ".join(comparison.failed_conditions))
+        if comparison.dirty_worktree:
+            notes.append(
+                "dirty worktree on the "
+                + " and ".join(comparison.dirty_worktree)
+                + (" sides" if len(comparison.dirty_worktree) > 1 else " side")
+            )
+        return f"`{comparison.baseline}` ({'; '.join([status, *notes])})"
+
+    def _provenance(self) -> str:
+        provenance = self.summary["provenance"]
+        dirty = {True: "dirty worktree", False: "clean worktree"}.get(
+            provenance["dirty"], "worktree state unknown"
+        )
+        deployment = provenance["deployment"] or {}
+        prompts = provenance["experiment_metadata"].get("prompts") or {}
+        sha = provenance["data_set_sha256"]
+        trace = self.summary["trace_url"]
+        return "; ".join(
+            (
+                f"commit {provenance['commit'] or 'unknown'} ({dirty})",
+                "Model Deployment "
+                + (
+                    f"{deployment.get('kind')} {deployment.get('model')}"
+                    if deployment
+                    else "unknown"
+                ),
+                "prompts "
+                + (
+                    ", ".join(
+                        f"{name} {digest[:DIGEST_PREFIX]}"
+                        for name, digest in sorted(prompts.items())
+                    )
+                    or "none recorded"
+                ),
+                f"Data Set {sha[:DIGEST_PREFIX] if sha else 'unknown'}",
+                f"headline {self.headline_version or 'none'}",
+                f"[report]({self.summary['report_path']})",
+                f"[trace]({trace})" if trace else "no trace",
+            )
+        )
+
+
+def _number(value: float | None, *, signed: bool = False) -> str:
+    if value is None:
+        return "unavailable"
+    return f"{value:+.3f}" if signed else f"{value:.3f}"
+
+
+def _change_cells(change: Change | None) -> tuple[str, str]:
+    if change is None:
+        return ("-", "-")
+    return (_number(change.baseline_value), _number(change.change, signed=True))
+
+
+def _table(
+    rows: Sequence[HeadlineRow],
+    extra_columns: tuple[str, ...] = (),
+    extra_cells: Callable[[HeadlineRow], tuple[str, ...]] = lambda _: (),
+) -> str:
+    columns = ("metric", "value", *extra_columns, "scored / selected", "aggregation")
+    lines = [
+        "| " + " | ".join(columns) + " |",
+        "| " + " | ".join("---" for _ in columns) + " |",
+    ]
+    lines.extend(
+        "| "
+        + " | ".join(
+            (
+                row.metric,
+                _number(row.value),
+                *extra_cells(row),
+                f"{row.scored_cases}/{row.selected_cases}",
+                row.aggregation.value,
+            )
+        )
+        + " |"
+        for row in rows
+    )
+    return "\n".join(lines)
+
+
+def _unavailable(rows: Sequence[HeadlineRow]) -> list[str]:
+    lines = [
+        f"- {row.metric} ({row.aggregation.value}) is unavailable: "
+        f"{row.unavailable_reason}"
+        for row in rows
+        if row.value is None
+    ]
+    return ["\n".join(lines)] if lines else []
+
 
 class Scorecard(BaseModel, frozen=True):
     """One axis per report, in argument order, and never an overall score."""
@@ -271,6 +434,11 @@ class Scorecard(BaseModel, frozen=True):
         if len(self.axes) == 1:
             return self.axes[0].to_json()
         return {"axes": [axis.to_json() for axis in self.axes]}
+
+    def to_markdown(self) -> str:
+        """Each axis's one-axis scorecard, in argument order."""
+
+        return "\n".join(axis.to_markdown() for axis in self.axes)
 
     @property
     def exit_code(self) -> int:
@@ -556,6 +724,15 @@ def _summary(
             "selected": len(selected_ids),
             "attempted": len(set(started) | set(counts)),
             "terminal": len(expected_set & set(counts)),
+            # The cases a quality measure sees: selected, completed, and
+            # without a recorded failure.
+            "scored": len(
+                {
+                    case["name"]
+                    for case in cases
+                    if case["name"] in expected_set and not is_failed_outcome(case)
+                }
+            ),
             "execution_failures": sum(stage_failures.values()),
             "unresolved": len(unresolved),
             "evaluator_errors": sum(len(c.get("evaluator_failures", [])) for c in cases)

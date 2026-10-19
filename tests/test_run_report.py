@@ -202,6 +202,7 @@ def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
         "selected": 4,
         "attempted": 3,
         "terminal": 3,
+        "scored": 1,
         "completed_answers": None,
         "declined": None,
         "execution_failures": 2,
