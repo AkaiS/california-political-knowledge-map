@@ -184,8 +184,9 @@ def test_compacted_run_keeps_fused_recall_at_10_first_with_its_headline_rows(
     assert "fused" not in document["report"]["cases"][0]["output"]
     # Found: fused recall 1 at 5 and 10, rank 1, complete; context has a, b.
     # Partial: fused recall 1/2, rank 2, incomplete; no context.  Nothing
-    # retrieved: all zero.  Only partial asked for the structural branch.
-    assert headline_table(document)[:10] == [
+    # retrieved: all zero.  The table holds outcomes only: no branch rows and
+    # no diagnostic rows.
+    assert headline_table(document) == [
         ["fused_recall_at_10", "primary", 0.5, 1.5, 3.0, "per_case_mean", 3, 3, None],
         ["fused_recall_at_5", "headline", 0.5, 1.5, 3.0, "per_case_mean", 3, 3, None],
         [
@@ -222,92 +223,9 @@ def test_compacted_run_keeps_fused_recall_at_10_first_with_its_headline_rows(
             3,
             None,
         ],
-        [
-            "full_text_completed",
-            "headline",
-            1.0,
-            3.0,
-            3.0,
-            "per_case_mean",
-            3,
-            3,
-            None,
-        ],
-        ["dense_completed", "headline", 2 / 3, 2.0, 3.0, "per_case_mean", 3, 3, None],
-        [
-            "structural_completed",
-            "headline",
-            0.0,
-            0.0,
-            1.0,
-            "per_case_mean",
-            1,
-            3,
-            None,
-        ],
         ["execution_failure_rate", "headline", 0.0, 0.0, 3.0, "rate", 3, 3, None],
     ]
     assert document["experiment_metadata"]["headline_version"] == "retrieval-v1"
-
-
-def test_diagnostic_rows_hold_each_branch_precision_and_an_unavailable_ndcg(
-    tmp_path,
-):
-    document = saved_run(tmp_path, POPULATION)
-    table = headline_table(document)
-
-    diagnostic = [(row[0], row[5]) for row in table if row[1] == "diagnostic"]
-    assert diagnostic == [
-        *(
-            (f"{branch}_{name}", "per_case_mean")
-            for branch in ("full_text", "dense", "structural")
-            for name in (
-                "recall_at_1",
-                "recall_at_5",
-                "recall_at_10",
-                "recall_at_50",
-                "reciprocal_rank",
-                "complete_evidence_at_5",
-                "complete_evidence_at_10",
-            )
-        ),
-        *(
-            (f"{ranking}_precision_at_{k}", "per_case_mean")
-            for ranking in ("fused", "full_text", "dense", "structural")
-            for k in (1, 5, 10, 50)
-        ),
-        ("fused_ndcg_at_10", "per_case_mean"),
-    ]
-    rows = headline_rows(document)
-    # Full-text ranked a first for found and c first for partial.
-    assert rows[("full_text_recall_at_1", "per_case_mean")]["value"] == 1 / 3
-    # Two of found's ten fused slots and one of partial's match a reference.
-    assert rows[("fused_precision_at_10", "per_case_mean")]["value"] == pytest.approx(
-        (2 / 10 + 1 / 10 + 0) / 3
-    )
-    # Only partial asked for the structural branch, which failed.
-    assert rows[("structural_recall_at_10", "per_case_mean")] == {
-        "metric": "structural_recall_at_10",
-        "role": "diagnostic",
-        "value": 0.0,
-        "numerator": 0.0,
-        "denominator": 1.0,
-        "aggregation": "per_case_mean",
-        "scored_cases": 1,
-        "selected_cases": 3,
-        "unavailable_reason": None,
-    }
-    assert rows[("fused_ndcg_at_10", "per_case_mean")] == {
-        "metric": "fused_ndcg_at_10",
-        "role": "diagnostic",
-        "value": None,
-        "numerator": None,
-        "denominator": None,
-        "aggregation": "per_case_mean",
-        "scored_cases": 0,
-        "selected_cases": 3,
-        "unavailable_reason": "the retrieval references have no relevance grades",
-    }
 
 
 STARTUP_FAILURE = RetrievalOutput(

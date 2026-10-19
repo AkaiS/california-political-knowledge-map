@@ -26,14 +26,13 @@ from knowledge_map.schemas.retrieval import (
     FusedCandidate,
     NonemptyText,
     RetrievalAnswer,
-    RetrievalBranch,
     RetrievalRequest,
 )
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
-from ..headline import Aggregation, CaseMean, HeadlineDefinition, Role, Unavailable
+from ..headline import CaseMean, HeadlineDefinition, Role
 from ..retrieval_report import METRIC_VERSION
 from .chat import ChatFailure, capture_messages, chat_stage_observations
 from .registry import EvaluationTask, register
@@ -321,6 +320,8 @@ class RetrievedReferenceEvidence(Evaluator):
 HEADLINE_VERSIONS = {"unique-chunk-budget-v2": "retrieval-v1"}
 
 # Each question is one information need, so every row is a per-question mean.
+# The rows are outcomes a reader would observe; branch breakdowns stay in the
+# RAG reviewer's case views.
 RETRIEVAL_HEADLINE = HeadlineDefinition(
     version=HEADLINE_VERSIONS[METRIC_VERSION],
     measures=(
@@ -330,37 +331,6 @@ RETRIEVAL_HEADLINE = HeadlineDefinition(
         CaseMean(score="fused_complete_evidence_at_10", role=Role.HEADLINE),
         CaseMean(score="context_recall", role=Role.HEADLINE),
         CaseMean(score="context_complete_evidence", role=Role.HEADLINE),
-        # A branch the question did not ask for records no completion.
-        *(
-            CaseMean(score=f"{branch.value}_completed", role=Role.HEADLINE)
-            for branch in RetrievalBranch
-        ),
-        *(
-            CaseMean(score=f"{branch.value}_{name}", role=Role.DIAGNOSTIC)
-            for branch in RetrievalBranch
-            for name in (
-                "recall_at_1",
-                "recall_at_5",
-                "recall_at_10",
-                "recall_at_50",
-                "reciprocal_rank",
-                "complete_evidence_at_5",
-                "complete_evidence_at_10",
-            )
-        ),
-        # Unlisted chunks may be relevant against provisional labels, so
-        # reference precision stays diagnostic.
-        *(
-            CaseMean(score=f"{ranking}_precision_at_{k}", role=Role.DIAGNOSTIC)
-            for ranking in ("fused", *(branch.value for branch in RetrievalBranch))
-            for k in RetrievedReferenceEvidence.ks
-        ),
-        Unavailable(
-            metric="fused_ndcg_at_10",
-            aggregation=Aggregation.PER_CASE_MEAN,
-            role=Role.DIAGNOSTIC,
-            reason="the retrieval references have no relevance grades",
-        ),
     ),
 )
 
