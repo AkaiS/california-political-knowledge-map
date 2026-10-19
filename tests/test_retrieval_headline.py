@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from engine_runs import headline_rows, headline_table
 from retrieval_runs import (
     FULL_TEXT,
@@ -25,11 +24,6 @@ from retrieval_runs import (
 from knowledge_map.evaluation.tasks.chat import ChatFailure
 from knowledge_map.evaluation.tasks.retrieval import RetrievalOutput
 from knowledge_map.schemas.retrieval import RetrievalAnswer
-
-
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
 def saved_run(directory, cases):

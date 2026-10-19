@@ -26,11 +26,6 @@ HOUSING = "Housing & Community Development"
 LABOR = "Labor & Employment"
 
 
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 def article(case_id, silver, returned):
     return (
         case_id,

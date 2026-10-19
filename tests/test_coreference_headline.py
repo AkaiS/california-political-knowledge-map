@@ -24,11 +24,6 @@ from knowledge_map.schemas import MentionSpan, MentionSpanOutcome
 TASKS = ("coreference", "coreference_annotator")
 
 
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 def span(label, text, entity):
     return MentionSpan(
         sentence_label=label, mention_text=text, canonical_entity_name=entity

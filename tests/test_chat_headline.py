@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from chat_runs import (
     FRAMEWORK_FAILURE,
     STAGE_FAILURE,
@@ -21,11 +20,6 @@ from chat_runs import (
 from engine_runs import headline_rows, headline_table
 
 from knowledge_map.evaluation.tasks.chat import ChatFailure
-
-
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
 def saved_run(directory, cases):

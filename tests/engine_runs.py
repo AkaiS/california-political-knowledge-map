@@ -2,8 +2,8 @@
 
 The engine-run seam: a stub task returns each case's authored output, and the
 run goes through the evaluation engine and the report checkpoint with the
-task's own case evaluators and headline definition. No model is called.
-Callers disable telemetry, as every engine-run test does.
+task's own case evaluators and headline definition. No model is called and
+no telemetry is sent.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from pydantic import BaseModel
 from pydantic_evals.lifecycle import CaseLifecycle
@@ -92,14 +93,15 @@ def run_task(
         root=directory / "reports",
     )
     try:
-        report = run_data_set(
-            data_set,
-            task=stub,
-            evaluators=task.evaluators,
-            report_evaluators=(task.headline.evaluator(),),
-            case_lifecycle=CaseLifecycle,
-            checkpoint=checkpoint,
-        )
+        with patch("knowledge_map.evaluation.engine.setup_telemetry", lambda: None):
+            report = run_data_set(
+                data_set,
+                task=stub,
+                evaluators=task.evaluators,
+                report_evaluators=(task.headline.evaluator(),),
+                case_lifecycle=CaseLifecycle,
+                checkpoint=checkpoint,
+            )
     except BaseException as error:  # noqa: BLE001 -- mirrors the CLI's interruption marker
         checkpoint.interrupted(f"{type(error).__name__}: {error}")
         return checkpoint.path

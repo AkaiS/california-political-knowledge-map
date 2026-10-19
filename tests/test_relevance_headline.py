@@ -9,14 +9,8 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from engine_runs import headline_table
 from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
-
-
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
 def saved_run(directory, cases):

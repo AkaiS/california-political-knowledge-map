@@ -23,11 +23,6 @@ from knowledge_map.schemas import Node, Relationship
 NO_DENOMINATOR = "no case contributed to the denominator"
 
 
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 def node(name, label="Organization", subs=(), **properties):
     return Node(name=name, label=label, sub_labels=list(subs), properties=properties)
 
