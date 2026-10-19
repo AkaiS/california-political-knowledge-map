@@ -101,9 +101,11 @@ def test_story_pipeline_assembly_passes_one_deployment_to_chat_stages_only() -> 
     status_tracker = MagicMock()
     dlq_adapter = MagicMock()
 
-    with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter") as coref, \
-         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter") as extraction, \
-         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter"):
+    with (
+        patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter") as coref,
+        patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter") as extraction,
+        patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter"),
+    ):
         pipeline = build_story_pipeline(
             deployment,
             db_adapter=db_adapter,
@@ -130,7 +132,9 @@ def test_story_ingest_command_forwards_selected_deployment_to_both_chat_stages()
     )
 
     with (
-        patch("knowledge_map.cli.main.select_story_deployment", return_value=deployment) as select,
+        patch(
+            "knowledge_map.cli.main.select_story_deployment", return_value=deployment
+        ) as select,
         patch("knowledge_map.cli.main.Neo4jAdapter"),
         patch("knowledge_map.cli.main.PydanticAIEmbeddingAdapter") as embedding,
         patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter") as coref,
@@ -272,8 +276,10 @@ def test_selected_openrouter_deployment_reaches_concrete_chat_stage_agents(
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
         requests.append(body)
-        parameters = body["tools"][0]["function"]["parameters"]
-        schema_text = json.dumps(parameters)
+        assert "tools" not in body
+        specification = body["response_format"]["json_schema"]
+        assert specification["strict"] is True
+        schema_text = json.dumps(specification["schema"])
         if '"nodes"' in schema_text:
             arguments = {"nodes": [], "relationships": []}
         elif '"accepted"' in schema_text:
@@ -309,19 +315,9 @@ def test_selected_openrouter_deployment_reaches_concrete_chat_stage_agents(
                         "index": 0,
                         "message": {
                             "role": "assistant",
-                            "content": None,
-                            "tool_calls": [
-                                {
-                                    "id": f"call-{len(requests)}",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "final_result",
-                                        "arguments": json.dumps(arguments),
-                                    },
-                                }
-                            ],
+                            "content": json.dumps(arguments),
                         },
-                        "finish_reason": "tool_calls",
+                        "finish_reason": "stop",
                     }
                 ],
             },
@@ -369,16 +365,20 @@ def test_selected_openrouter_deployment_reaches_concrete_chat_stage_agents(
     )
 
 
-def test_story_pipeline_assembly_builds_the_policy_area_stage_from_the_deployment() -> None:
+def test_story_pipeline_assembly_builds_the_policy_area_stage_from_the_deployment() -> (
+    None
+):
     deployment = ModelDeployment(
         kind=DeploymentKind.OPENROUTER,
         model="remote/story-model",
         provider_policy={"providers": ("google-ai-studio",)},
     )
 
-    with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"), \
-         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"), \
-         patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as policy_areas:
+    with (
+        patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"),
+        patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"),
+        patch("knowledge_map.cli.main.PydanticAIPolicyAreaAdapter") as policy_areas,
+    ):
         pipeline = build_story_pipeline(
             deployment,
             db_adapter=MagicMock(),
@@ -398,8 +398,10 @@ def test_story_pipeline_assembly_preserves_the_policy_area_injection_seam() -> N
     )
     injected = MagicMock()
 
-    with patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"), \
-         patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"):
+    with (
+        patch("knowledge_map.cli.main.PydanticAICoreferenceAdapter"),
+        patch("knowledge_map.cli.main.PydanticAIEntityExtractionAdapter"),
+    ):
         pipeline = build_story_pipeline(
             deployment,
             db_adapter=MagicMock(),

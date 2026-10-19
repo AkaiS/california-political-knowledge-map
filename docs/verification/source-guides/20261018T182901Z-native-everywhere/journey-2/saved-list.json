@@ -1,0 +1,22 @@
+{
+  "guides": [
+    {
+      "guide_id": "86b91283-0db7-41fe-b4fa-0a1c8297ea8d",
+      "question": "What should I read about housing legislation in California?",
+      "status": "completed",
+      "created_at": "2026-10-18T18:30:05.361161Z",
+      "latest_attempt": {
+        "attempt_id": "93cfaf95-7dfe-4c48-b670-aaebc6e22daf",
+        "started_at": "2026-10-18T18:30:05.361161Z",
+        "finished_at": "2026-10-18T18:30:52.401973Z",
+        "status": "completed",
+        "outcome": "completed",
+        "assessment": {
+          "status": "allowed",
+          "reading_order": "relevance"
+        }
+      },
+      "last_retrieved_at": "2026-10-18T18:30:52.401973Z"
+    }
+  ]
+}

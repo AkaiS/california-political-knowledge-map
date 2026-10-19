@@ -148,10 +148,24 @@ def test_openrouter_gemma_assessment_can_return_real_null_dates(monkeypatch, mod
 
 
 @pytest.mark.parametrize(
-    "model", ["google/gemma-4-26b-a4b-it", "~google/gemma-4-26b-a4b-it:free"]
+    "model",
+    [
+        "google/gemma-4-26b-a4b-it",
+        "~google/gemma-4-26b-a4b-it:free",
+        "google/gemini-3.1-flash-lite",
+        "openai/gpt-4o-mini",
+        "meta-llama/llama-3.3-70b-instruct",
+    ],
 )
-def test_gemma_preserves_every_other_inferred_profile_field(monkeypatch, model):
+def test_openrouter_models_change_only_structured_output_profile_fields(
+    monkeypatch, model
+):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-output-test-key")
+    structured_output_fields = {
+        "json_schema_transformer",
+        "default_structured_output_mode",
+        "supports_json_schema_output",
+    }
 
     async def compare():
         built = get_chat_model(
@@ -164,39 +178,12 @@ def test_gemma_preserves_every_other_inferred_profile_field(monkeypatch, model):
         )
         try:
             actual, original = dict(built.profile), dict(baseline.profile)
-            actual.pop("json_schema_transformer")
-            original.pop("json_schema_transformer")
+            assert actual["default_structured_output_mode"] == "native"
+            assert actual["supports_json_schema_output"] is True
+            for field in structured_output_fields:
+                actual.pop(field)
+                original.pop(field)
             assert actual == original
-        finally:
-            await built.client.close()
-
-    asyncio.run(compare())
-
-
-@pytest.mark.parametrize(
-    "model",
-    [
-        "google/gemini-3.1-flash-lite",
-        "openai/gpt-4o-mini",
-        "meta-llama/llama-3.3-70b-instruct",
-    ],
-)
-def test_other_openrouter_models_preserve_the_complete_provider_profile(
-    monkeypatch, model
-):
-    monkeypatch.setenv("OPENROUTER_API_KEY", "unused-output-test-key")
-
-    async def compare():
-        built = get_chat_model(
-            deployment(model),
-            cache=False,
-            transport=httpx.MockTransport(lambda _: None),
-        )
-        baseline = OpenRouterModel(
-            model, provider=built.provider, settings=built.settings
-        )
-        try:
-            assert built.profile == baseline.profile
         finally:
             await built.client.close()
 
@@ -228,9 +215,7 @@ def test_local_gemma_keeps_inlined_definitions_and_real_null_dates():
 
 
 @pytest.mark.parametrize("invalid", ["", "null"])
-def test_bad_date_strings_still_fail_assessment_without_output_retry(
-    monkeypatch, invalid
-):
+def test_bad_date_strings_fail_assessment_after_one_output_retry(monkeypatch, invalid):
     monkeypatch.setenv("OPENROUTER_API_KEY", "unused-output-test-key")
     requests = []
 
@@ -253,4 +238,4 @@ def test_bad_date_strings_still_fail_assessment_without_output_retry(
         UnexpectedModelBehavior, match="Exceeded maximum output retries"
     ):
         asyncio.run(assess("google/gemma-4-26b-a4b-it", httpx.MockTransport(respond)))
-    assert len(requests) == 1
+    assert len(requests) == 2

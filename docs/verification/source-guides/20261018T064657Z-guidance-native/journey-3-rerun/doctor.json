@@ -1,0 +1,27 @@
+{
+  "url": "http://127.0.0.1:8135",
+  "cwd": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985/.scratch/verify-source-guides-18dh_bq8",
+  "sqlite": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985/.scratch/verify-source-guides-18dh_bq8/document_store.db",
+  "process_group": 38080,
+  "listeners": [
+    {
+      "pid": 38081,
+      "command": "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985/.venv/bin/python /Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985/.venv/bin/ca-map chat --port 8135"
+    }
+  ],
+  "revision": "bb9d49ed3a04809f692bf2c67a16d5d4e0389cf6",
+  "dirty": true,
+  "coverage": {
+    "entries": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ]
+  },
+  "guide_count": 1,
+  "authentication": "No application login; production startup accepted dependency configuration",
+  "limits": "Model listing checks reachability. Doctor does not prove Jev or embedding inference."
+}

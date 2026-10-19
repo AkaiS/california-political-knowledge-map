@@ -1,0 +1,82 @@
+{
+  "question": "What should I read about housing legislation in California?",
+  "status": "empty",
+  "assessment": {
+    "status": "allowed",
+    "reading_order": "relevance"
+  },
+  "message": "The provided articles discuss insurance myths and the impact of property insurance on housing and communities, but do not contain information regarding specific housing legislation.\n\nRetrieved articles were assessed, but none supported a reading direction for this question. This does not establish that matching reporting does not exist.",
+  "articles": [],
+  "groups": [],
+  "relevance_order": [],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ],
+    "completion": "completed",
+    "bounded_selection": true,
+    "selection_limited": true,
+    "included_articles": 0
+  },
+  "disclosures": [
+    {
+      "kind": "unmatched_request",
+      "message": "The provided articles discuss insurance myths and the impact of property insurance on housing and communities, but do not contain information regarding specific housing legislation.",
+      "request_portion": "housing legislation in California"
+    },
+    {
+      "kind": "irrelevant_candidates",
+      "message": "Retrieved articles were assessed, but none supported a reading direction for this question. This does not establish that matching reporting does not exist."
+    }
+  ],
+  "guide_id": "3c0c2f2c-20e9-40c7-8e35-f5f35384bb5f",
+  "created_at": "2026-10-18T08:00:02.314384Z",
+  "latest_attempt": {
+    "attempt_id": "bd6a7d59-9844-441e-ad13-9c005a67894f",
+    "started_at": "2026-10-18T08:00:02.314384Z",
+    "finished_at": "2026-10-18T08:00:11.345734Z",
+    "status": "empty",
+    "outcome": "empty",
+    "assessment": {
+      "status": "allowed",
+      "reading_order": "relevance"
+    },
+    "message": "The provided articles discuss insurance myths and the impact of property insurance on housing and communities, but do not contain information regarding specific housing legislation.\n\nRetrieved articles were assessed, but none supported a reading direction for this question. This does not establish that matching reporting does not exist.",
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-10-12"
+        }
+      ],
+      "completion": "completed",
+      "bounded_selection": true,
+      "selection_limited": true,
+      "included_articles": 0
+    },
+    "disclosures": [
+      {
+        "kind": "unmatched_request",
+        "message": "The provided articles discuss insurance myths and the impact of property insurance on housing and communities, but do not contain information regarding specific housing legislation.",
+        "request_portion": "housing legislation in California"
+      },
+      {
+        "kind": "irrelevant_candidates",
+        "message": "Retrieved articles were assessed, but none supported a reading direction for this question. This does not establish that matching reporting does not exist."
+      }
+    ]
+  },
+  "last_retrieved_at": "2026-10-18T08:00:11.345734Z",
+  "publication_orders": {
+    "publication_asc": [],
+    "publication_desc": []
+  }
+}
