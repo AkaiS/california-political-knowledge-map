@@ -15,6 +15,7 @@ from pydantic_evals.reporting import EvaluationReport, ReportCase
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality, report_path, write_report
 from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
+from knowledge_map.evaluation.tasks.relevance import RELEVANCE_HEADLINE
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -59,6 +60,7 @@ def test_eval_run_binds_one_model_deployment_to_task_and_report(
         name="relevance",
         data_set_stem="relevance",
         label_quality=LabelQuality.GOLD,
+        headline=RELEVANCE_HEADLINE,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,

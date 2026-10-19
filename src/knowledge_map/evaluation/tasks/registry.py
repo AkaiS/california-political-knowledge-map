@@ -48,6 +48,12 @@ class EvaluationTask:
     and forgets. Wrong provenance in a committed report cannot be spotted
     by reading the report.
     """
+    headline: HeadlineDefinition
+    """The Headline Metrics a completed run records, under their version.
+
+    The run's report evaluator and the version recorded beside the prompt
+    digests both come from this one value, so they cannot disagree.
+    """
     metadata_type: type[Any] = dict
     collect: Callable[[], Any] | None = None
     """Read labeled candidates out of the project's own data, if it has any."""
@@ -71,12 +77,6 @@ class EvaluationTask:
     """
     case_lifecycle: type[CaseLifecycle] | None = None
     """Optional case evidence capture through Pydantic Evals' lifecycle."""
-    headline: HeadlineDefinition | None = None
-    """The Headline Metrics a completed run records, under their version.
-
-    The run's report evaluator and the version recorded beside the prompt
-    digests both come from this one value, so they cannot disagree.
-    """
 
     @property
     def data_set_stem(self) -> str:

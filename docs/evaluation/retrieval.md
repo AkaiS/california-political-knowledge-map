@@ -11,7 +11,11 @@ uv run scripts/run_evaluation.py rag
 
 An explicitly requested mini set uses `--sample 5 --seed 42`; one named case uses
 `--case C-M1-01`. Summarize an existing attempt with
-`uv run scripts/run_evaluation.py --report PATH`. New runs save an initial
+`uv run scripts/run_evaluation.py --report PATH`; repeat `--report` for one
+scorecard axis per attempt. The summary is JSON unless you pass
+`--format markdown`. Each axis is compared against the newest earlier
+Comparable Run unless `--baseline PATH` names a report or `--baseline none`
+skips the comparison. New runs save an initial
 population manifest and atomic progress snapshots to one report path. Failed and
 interrupted attempts remain inspectable, with unresolved cases and nonzero exit
 status distinguished from completed answers. See

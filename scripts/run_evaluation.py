@@ -1,7 +1,9 @@
 """Run an established Evaluation Data Set, then account for every selected case.
 
 Use --plan to validate selection without model calls; use --report PATH to
-produce the same summary from a saved (including interrupted) attempt.
+produce the same summary from a saved (including interrupted) attempt, and
+repeat --report for one scorecard axis per report. --format markdown prints
+the scorecard as markdown instead of JSON.
 """
 
 from __future__ import annotations
@@ -148,15 +150,15 @@ def resolve_plan(
     }
 
 
-def summarize_report(
-    path: Path,
+def summarize_reports(
+    paths: list[Path],
     *,
     baseline: Baseline = "auto",
     reviewer_port: int = DEFAULT_REVIEWER_PORT,
 ) -> Scorecard:
-    """A planned run's single-axis Scorecard."""
+    """One Scorecard axis per saved report, in the order given."""
     return Scorecard.build(
-        [ReportDocument.load(path)],
+        [ReportDocument.load(path) for path in paths],
         baseline=baseline,
         reviewer_port=reviewer_port,
     )
@@ -166,9 +168,22 @@ def _baseline(value: str) -> Baseline:
     return value if value in ("auto", "none") else Path(value)
 
 
+def _print(scorecard: Scorecard, output_format: str, *, key: str | None = None) -> None:
+    if output_format == "markdown":
+        print(scorecard.to_markdown(), end="", flush=True)
+        return
+    summary = scorecard.to_json()
+    print(
+        json.dumps(
+            summary if key is None else {key: summary}, indent=2, sort_keys=True
+        ),
+        flush=True,
+    )
+
+
 def execute_plan(
     plan: dict[str, Any], *, baseline: Baseline = "auto"
-) -> tuple[dict[str, Any] | None, int]:
+) -> tuple[Scorecard | None, int]:
     path = Path(plan["data_set"])
     if _sha256(path) != plan["data_set_sha256"]:
         raise ValueError(
@@ -215,10 +230,10 @@ def execute_plan(
         exit_code = 1
     if not written:
         return None, exit_code or 1
-    scorecard = summarize_report(
-        written[-1], baseline=baseline, reviewer_port=plan["reviewer_port"]
+    scorecard = summarize_reports(
+        [written[-1]], baseline=baseline, reviewer_port=plan["reviewer_port"]
     )
-    return scorecard.to_json(), exit_code or scorecard.exit_code
+    return scorecard, exit_code or scorecard.exit_code
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -259,7 +274,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Validate selection and print it without execution",
     )
     parser.add_argument(
-        "--report", type=Path, help="Summarize a saved attempt without execution"
+        "--report",
+        type=Path,
+        action="append",
+        help="Summarize a saved attempt without execution; repeat for one axis per report",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("json", "markdown"),
+        default="json",
+        help="Print the scorecard as JSON or as markdown (default: json)",
     )
     args = parser.parse_args(argv)
     if args.report:
@@ -268,12 +292,12 @@ def main(argv: list[str] | None = None) -> int:
                 "--report summarizes a saved attempt; provide no selection arguments"
             )
         try:
-            scorecard = summarize_report(
+            scorecard = summarize_reports(
                 args.report, baseline=args.baseline, reviewer_port=args.reviewer_port
             )
         except ValueError as error:
             parser.error(str(error))
-        print(json.dumps(scorecard.to_json(), indent=2, sort_keys=True))
+        _print(scorecard, args.format)
         return scorecard.exit_code
     if not args.target:
         parser.error("Choose the evaluation task established by context")
@@ -293,12 +317,9 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({"evaluation_plan": plan}, indent=2, sort_keys=True), flush=True)
     if args.plan:
         return 0
-    summary, exit_code = execute_plan(plan, baseline=args.baseline)
-    if summary is not None:
-        print(
-            json.dumps({"evaluation_summary": summary}, indent=2, sort_keys=True),
-            flush=True,
-        )
+    scorecard, exit_code = execute_plan(plan, baseline=args.baseline)
+    if scorecard is not None:
+        _print(scorecard, args.format, key="evaluation_summary")
     return exit_code
 
 

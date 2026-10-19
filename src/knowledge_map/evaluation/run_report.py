@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import shlex
 from collections import Counter, defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
 from statistics import fmean
@@ -20,7 +20,14 @@ from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from .headline import Aggregation, Headline, HeadlineRow, Role, is_failed_outcome
+from .headline import (
+    EXECUTION_FAILURE_RATE,
+    Aggregation,
+    Headline,
+    HeadlineRow,
+    Role,
+    is_failed_outcome,
+)
 from .rag_review import project_report
 
 BRANCHES = ("full_text", "dense", "structural")
@@ -233,10 +240,7 @@ class Axis(BaseModel, frozen=True):
     def to_markdown(self) -> str:
         headline, summary = self.headline, self.summary
         counts, provenance = summary["counts"], summary["provenance"]
-        changes = {
-            (change.metric, change.aggregation): change
-            for change in self.comparison.changes
-        }
+        changes = self._changes()
         parts = [
             f"## {summary['task']}: {self._result(changes)}",
             (
@@ -277,6 +281,12 @@ class Axis(BaseModel, frozen=True):
             )
         return "\n\n".join(parts) + "\n"
 
+    def _changes(self) -> dict[tuple[str, Aggregation], Change]:
+        return {
+            (change.metric, change.aggregation): change
+            for change in self.comparison.changes
+        }
+
     def _result(self, changes: dict[tuple[str, Aggregation], Change]) -> str:
         headline = self.headline
         if isinstance(headline, NoHeadline):
@@ -292,6 +302,39 @@ class Axis(BaseModel, frozen=True):
             else f"{_number(change.change, signed=True)} against the baseline"
         )
         return f"{primary.metric} {_number(primary.value)} ({against})"
+
+    def _summary_cells(self) -> tuple[str, ...]:
+        headline, summary = self.headline, self.summary
+        counts = summary["counts"]
+        label_quality = summary["provenance"]["label_quality"] or "unknown"
+        status = self.comparison.status.replace("_", " ")
+        if isinstance(headline, NoHeadline):
+            return (
+                summary["task"],
+                label_quality,
+                "-",
+                f"no Headline Metrics ({headline.reason})",
+                "-",
+                f"{counts['scored']}/{counts['selected']}",
+                "-",
+                status,
+            )
+        primary = headline.primary
+        failures = headline.row(EXECUTION_FAILURE_RATE, Aggregation.RATE)
+        change = self._changes().get((primary.metric, primary.aggregation))
+        return (
+            summary["task"],
+            label_quality,
+            primary.metric,
+            # An Unlabeled Set's primary row says it has no quality metric.
+            f"unavailable ({primary.unavailable_reason})"
+            if primary.value is None
+            else _row_value(primary),
+            _change_cells(change)[1],
+            f"{primary.scored_cases}/{primary.selected_cases}",
+            "-" if failures is None else _row_value(failures),
+            status,
+        )
 
     def _baseline(self) -> str:
         comparison = self.comparison
@@ -366,6 +409,10 @@ def _value(
     return f"{_number(value)} ({_count(numerator)}/{_count(denominator)})"
 
 
+def _row_value(row: HeadlineRow) -> str:
+    return _value(row.aggregation, row.value, row.numerator, row.denominator)
+
+
 def _count(count: float) -> str:
     return f"{count:.0f}" if count.is_integer() else f"{count:.3f}"
 
@@ -389,26 +436,29 @@ def _table(
     extra_columns: tuple[str, ...] = (),
     extra_cells: Callable[[HeadlineRow], tuple[str, ...]] = lambda _: (),
 ) -> str:
-    columns = ("metric", "value", *extra_columns, "scored / selected", "aggregation")
-    lines = [
-        "| " + " | ".join(columns) + " |",
-        "| " + " | ".join("---" for _ in columns) + " |",
-    ]
-    lines.extend(
-        "| "
-        + " | ".join(
+    return _markdown_table(
+        ("metric", "value", *extra_columns, "scored / selected", "aggregation"),
+        (
             (
                 row.metric,
-                _value(row.aggregation, row.value, row.numerator, row.denominator),
+                _row_value(row),
                 *extra_cells(row),
                 f"{row.scored_cases}/{row.selected_cases}",
                 row.aggregation.value,
             )
-        )
-        + " |"
-        for row in rows
+            for row in rows
+        ),
     )
-    return "\n".join(lines)
+
+
+def _markdown_table(columns: Sequence[str], cell_rows: Iterable[Sequence[str]]) -> str:
+    return "\n".join(
+        (
+            "| " + " | ".join(columns) + " |",
+            "| " + " | ".join("---" for _ in columns) + " |",
+            *("| " + " | ".join(cells) + " |" for cells in cell_rows),
+        )
+    )
 
 
 def _unavailable(rows: Sequence[HeadlineRow]) -> list[str]:
@@ -468,9 +518,28 @@ class Scorecard(BaseModel, frozen=True):
         return {"axes": [axis.to_json() for axis in self.axes]}
 
     def to_markdown(self) -> str:
-        """Each axis's one-axis scorecard, in argument order."""
+        """Each axis's one-axis scorecard, in argument order.
 
-        return "\n".join(axis.to_markdown() for axis in self.axes)
+        Several axes open with one summary row per axis.
+        """
+
+        scorecards = "\n".join(axis.to_markdown() for axis in self.axes)
+        if len(self.axes) == 1:
+            return scorecards
+        summary = _markdown_table(
+            (
+                "axis",
+                "label quality",
+                "primary metric",
+                "value",
+                "change",
+                "scored / selected",
+                "failure rate",
+                "comparison status",
+            ),
+            (axis._summary_cells() for axis in self.axes),
+        )
+        return summary + "\n\n" + scorecards
 
     @property
     def exit_code(self) -> int:

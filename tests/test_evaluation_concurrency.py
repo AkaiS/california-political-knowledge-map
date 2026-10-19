@@ -14,6 +14,7 @@ from pydantic_evals.reporting import EvaluationReport, ReportCase
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
+from knowledge_map.evaluation.tasks.relevance import RELEVANCE_HEADLINE
 from knowledge_map.schemas import (
     DeploymentKind,
     ModelDeployment,
@@ -59,6 +60,7 @@ def test_openrouter_evaluation_uses_one_case_and_admission_ceiling(
         name="relevance",
         data_set_stem="relevance",
         label_quality=LabelQuality.GOLD,
+        headline=RELEVANCE_HEADLINE,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,

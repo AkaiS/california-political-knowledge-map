@@ -11,6 +11,7 @@ from pydantic_evals.reporting import EvaluationReport, ReportCase, ReportCaseFai
 
 from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import EvaluationCase, EvaluationDataSet, LabelQuality
+from knowledge_map.evaluation.tasks.relevance import RELEVANCE_HEADLINE
 
 
 def _arguments(data_set: Path, *, no_report: bool = False) -> argparse.Namespace:
@@ -31,6 +32,7 @@ def _task() -> SimpleNamespace:
         name="relevance",
         data_set_stem="relevance",
         label_quality=LabelQuality.GOLD,
+        headline=RELEVANCE_HEADLINE,
         prompt_digests=dict,
         input_type=dict,
         output_type=dict,

@@ -228,7 +228,6 @@ def _run(args: argparse.Namespace) -> Path | None:
             }
         )
 
-    headline = getattr(task, "headline", None)
     metadata = {
         **getattr(args, "run_metadata", {}),
         **getattr(args, "experiment_metadata", {}),
@@ -236,7 +235,7 @@ def _run(args: argparse.Namespace) -> Path | None:
         "deployment": deployment.model_dump(mode="json"),
         "commit": run_commit(),
         "prompts": task.prompt_digests(),
-        "headline_version": headline.version if headline else None,
+        "headline_version": task.headline.version,
         "data_set": str(path),
         "label_quality": task.label_quality.value,
         "split": split.value if split else None,
@@ -274,7 +273,7 @@ def _run(args: argparse.Namespace) -> Path | None:
                 data_set,
                 task=task.build(deployment, data_set),
                 evaluators=task.evaluators,
-                report_evaluators=(headline.evaluator(),) if headline else (),
+                report_evaluators=(task.headline.evaluator(),),
                 case_lifecycle=getattr(task, "case_lifecycle", None),
                 split=split,
                 max_concurrency=args.max_concurrency,

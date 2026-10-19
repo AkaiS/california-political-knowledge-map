@@ -3,16 +3,16 @@
 Every test saves Evaluation Reports through an engine run, pins the metadata a
 run records from its environment (time, commit, worktree state), builds a
 ``Scorecard`` from ``ReportDocument.load`` and reads only its markdown and
-exit code.  Expected text is written out in full; paths that differ on every
-run are replaced by names before comparing.
+exit code.  Expected text is written out in full; paths and task durations
+that differ on every run are replaced by names before comparing.
 """
 
 from __future__ import annotations
 
-import json
-
 import pytest
+from chat_runs import STAGE_FAILURE, answered, assessed, run_chat
 from engine_runs import run_task
+from pinned_reports import markdown, pinned
 from relevance_runs import CONFUSION_CASES, IRRELEVANT, RELEVANT, run_relevance
 
 from knowledge_map.evaluation import LabelQuality
@@ -27,42 +27,6 @@ from knowledge_map.evaluation.tasks.extraction import (
 @pytest.fixture(autouse=True)
 def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
-def pinned(path, metadata=None, **fields):
-    """Save ``path`` again with its environment-recorded fields pinned.
-
-    ``metadata`` overrides keys of the recorded ``experiment_metadata``.
-    """
-
-    document = json.loads(path.read_text())
-    document.update(
-        {
-            "commit": "1234567",
-            "dirty": False,
-            "trace_url": None,
-            "ran_at": "2026-10-02T12:00:00+00:00",
-            "data_set_sha256": "ab" * 32,
-            "experiment_metadata": {
-                **document["experiment_metadata"],
-                "prompts": {"relevance": "cd" * 32},
-                "selection": {"scope": "full"},
-                **(metadata or {}),
-            },
-            **fields,
-        }
-    )
-    path.write_text(json.dumps(document))
-    return path
-
-
-def markdown(card, **names):
-    """``card``'s markdown with each named report's path replaced by its name."""
-
-    text = card.to_markdown()
-    for name, path in names.items():
-        text = text.replace(str(path.resolve()), f"<{name}>")
-    return text
 
 
 # Nothing predicted RELEVANT, so RELEVANT precision has no denominator.
@@ -234,10 +198,10 @@ def test_an_unavailable_primary_heading_gives_its_reason_not_a_change(tmp_path):
     )
 
 
-def test_diagnostic_rows_render_in_a_collapsed_section_after_the_scorecard(tmp_path):
+def run_extraction(directory):
     # Every diagnostic accuracy needs a matched node; this chunk has none.
-    current = run_task(
-        tmp_path,
+    return run_task(
+        directory,
         "extraction",
         [
             (
@@ -251,6 +215,10 @@ def test_diagnostic_rows_render_in_a_collapsed_section_after_the_scorecard(tmp_p
         ),
         label_quality=LabelQuality.SILVER,
     )
+
+
+def test_diagnostic_rows_render_in_a_collapsed_section_after_the_scorecard(tmp_path):
+    current = run_extraction(tmp_path)
 
     rendered = Scorecard.build(
         [ReportDocument.load(current)], baseline="none"
@@ -277,6 +245,161 @@ def test_diagnostic_rows_render_in_a_collapsed_section_after_the_scorecard(tmp_p
         "no case contributed to the denominator\n"
         "- stance_alignment_accuracy (per_case_mean) is unavailable: "
         "no case contributed to the denominator\n"
+        "\n"
+        "</details>\n"
+    )
+
+
+def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
+    baseline = pinned(
+        run_relevance(tmp_path / "relevance", CONFUSION_CASES),
+        ran_at="2026-10-01T12:00:00+00:00",
+    )
+    relevance = pinned(run_relevance(tmp_path / "relevance", NOTHING_RELEVANT))
+    chat = pinned(
+        run_chat(
+            tmp_path / "chat",
+            [answered("AB 1"), assessed("SB 1", "declined"), STAGE_FAILURE],
+        )
+    )
+    extraction = pinned(run_extraction(tmp_path / "extraction"))
+
+    card = Scorecard.build(
+        [ReportDocument.load(path) for path in (relevance, chat, extraction)],
+        baseline="auto",
+    )
+
+    assert card.exit_code == 1
+    assert markdown(
+        card,
+        baseline=baseline,
+        relevance=relevance,
+        chat=chat,
+        extraction=extraction,
+    ) == (
+        "| axis | label quality | primary metric | value | change | scored / "
+        "selected | failure rate | comparison status |\n"
+        "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+        "| relevance | gold | relevant_f1 | 0.000 (0/3) | -0.667 | 5/5 | 0.000 "
+        "(0/5) | comparable |\n"
+        "| chat | unlabeled | answer_quality | unavailable (Unlabeled Set: no "
+        "quality metric) | - | 0/3 | 0.333 (1/3) | no earlier run |\n"
+        "| extraction | silver | node_f1 | unavailable (no case contributed to "
+        "the denominator) | - | 1/1 | 0.000 (0/1) | no earlier run |\n"
+        "\n"
+        "## relevance: relevant_f1 0.000 (-0.667 against the baseline)\n"
+        "\n"
+        "Population: label quality gold, selection scope full; 5 selected, 5 "
+        "scored, 0 failed, 0 unresolved.\n"
+        "\n"
+        "Baseline: `<baseline>` (comparable).\n"
+        "\n"
+        "| metric | value | baseline value | change | scored / selected | "
+        "aggregation |\n"
+        "| --- | --- | --- | --- | --- | --- |\n"
+        "| relevant_f1 | 0.000 (0/3) | 0.667 (4/6) | -0.667 | 5/5 | pooled |\n"
+        "| relevant_precision | unavailable (0/0) | 0.667 (2/3) | unavailable |"
+        " 5/5 | pooled |\n"
+        "| relevant_recall | 0.000 (0/3) | 0.667 (2/3) | -0.667 | 5/5 | pooled "
+        "|\n"
+        "| accuracy | 0.400 (2/5) | 0.600 (3/5) | -0.200 | 5/5 | rate |\n"
+        "| true_positives | 0.000 (0/5) | 0.400 (2/5) | -0.400 | 5/5 | rate |\n"
+        "| false_positives | 0.000 (0/5) | 0.200 (1/5) | -0.200 | 5/5 | rate |\n"
+        "| false_negatives | 0.600 (3/5) | 0.200 (1/5) | +0.400 | 5/5 | rate |\n"
+        "| true_negatives | 0.400 (2/5) | 0.200 (1/5) | +0.200 | 5/5 | rate |\n"
+        "| execution_failure_rate | 0.000 (0/5) | 0.000 (0/5) | +0.000 | 5/5 | "
+        "rate |\n"
+        "\n"
+        "- relevant_precision (pooled) is unavailable: no case contributed to "
+        "the denominator\n"
+        "\n"
+        "Provenance: commit 1234567 (clean worktree); Model Deployment local "
+        "stub; prompts relevance cdcdcdcdcdcd; Data Set abababababab; headline "
+        "relevance-v1; [report](<relevance>); no trace.\n"
+        "\n"
+        "## chat: answer_quality unavailable (Unlabeled Set: no quality metric)\n"
+        "\n"
+        "Population: label quality unlabeled, selection scope full; 3 selected,"
+        " 2 scored, 1 failed, 0 unresolved.\n"
+        "\n"
+        "Baseline: none (no earlier run).\n"
+        "\n"
+        "| metric | value | baseline value | change | scored / selected | "
+        "aggregation |\n"
+        "| --- | --- | --- | --- | --- | --- |\n"
+        "| answer_quality | unavailable | - | - | 0/3 | rate |\n"
+        "| completed_answer_rate | 0.333 (1/3) | - | - | 3/3 | rate |\n"
+        "| declined_rate | 0.333 (1/3) | - | - | 3/3 | rate |\n"
+        "| deferred_rate | 0.000 (0/3) | - | - | 3/3 | rate |\n"
+        "| needs_edit_rate | 0.000 (0/3) | - | - | 3/3 | rate |\n"
+        "| task_duration_p50 | <duration> | - | - | 2/3 | quantile |\n"
+        "| task_duration_p95 | <duration> | - | - | 2/3 | quantile |\n"
+        "| execution_failure_rate | 0.333 (1/3) | - | - | 3/3 | rate |\n"
+        "\n"
+        "- answer_quality (rate) is unavailable: Unlabeled Set: no quality "
+        "metric\n"
+        "\n"
+        "Provenance: commit 1234567 (clean worktree); Model Deployment local "
+        "stub; prompts chat cdcdcdcdcdcd; Data Set abababababab; headline "
+        "chat-v1; [report](<chat>); no trace.\n"
+        "\n"
+        "## extraction: node_f1 unavailable (no case contributed to the "
+        "denominator)\n"
+        "\n"
+        "Population: label quality silver, selection scope full; 1 selected, 1 "
+        "scored, 0 failed, 0 unresolved.\n"
+        "\n"
+        "Baseline: none (no earlier run).\n"
+        "\n"
+        "| metric | value | baseline value | change | scored / selected | "
+        "aggregation |\n"
+        "| --- | --- | --- | --- | --- | --- |\n"
+        "| node_f1 | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| node_precision | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| node_recall | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| relationship_precision | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| relationship_recall | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| relationship_f1 | unavailable (0/0) | - | - | 1/1 | pooled |\n"
+        "| node_f1 | 1.000 | - | - | 1/1 | per_case_mean |\n"
+        "| relationship_f1 | 1.000 | - | - | 1/1 | per_case_mean |\n"
+        "| StayedInsideTheNewsOntology | 1.000 | - | - | 1/1 | per_case_mean |\n"
+        "| execution_failure_rate | 0.000 (0/1) | - | - | 1/1 | rate |\n"
+        "\n"
+        "- node_f1 (pooled) is unavailable: no case contributed to the "
+        "denominator\n"
+        "- node_precision (pooled) is unavailable: no case contributed to the "
+        "denominator\n"
+        "- node_recall (pooled) is unavailable: no case contributed to the "
+        "denominator\n"
+        "- relationship_precision (pooled) is unavailable: no case contributed "
+        "to the denominator\n"
+        "- relationship_recall (pooled) is unavailable: no case contributed to "
+        "the denominator\n"
+        "- relationship_f1 (pooled) is unavailable: no case contributed to the "
+        "denominator\n"
+        "\n"
+        "Provenance: commit 1234567 (clean worktree); Model Deployment local "
+        "stub; prompts extraction cdcdcdcdcdcd; Data Set abababababab; headline"
+        " extraction-v1; [report](<extraction>); no trace.\n"
+        "\n"
+        "<details>\n"
+        "<summary>Diagnostic rows</summary>\n"
+        "\n"
+        "| metric | value | scored / selected | aggregation |\n"
+        "| --- | --- | --- | --- |\n"
+        "| sub_label_accuracy | unavailable | 0/1 | per_case_mean |\n"
+        "| node_property_accuracy | unavailable | 0/1 | per_case_mean |\n"
+        "| claim_property_accuracy | unavailable | 0/1 | per_case_mean |\n"
+        "| stance_alignment_accuracy | unavailable | 0/1 | per_case_mean |\n"
+        "\n"
+        "- sub_label_accuracy (per_case_mean) is unavailable: no case "
+        "contributed to the denominator\n"
+        "- node_property_accuracy (per_case_mean) is unavailable: no case "
+        "contributed to the denominator\n"
+        "- claim_property_accuracy (per_case_mean) is unavailable: no case "
+        "contributed to the denominator\n"
+        "- stance_alignment_accuracy (per_case_mean) is unavailable: no case "
+        "contributed to the denominator\n"
         "\n"
         "</details>\n"
     )

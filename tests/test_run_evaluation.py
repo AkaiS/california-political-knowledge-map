@@ -91,9 +91,7 @@ def _saved(tmp_path, document):
     return path
 
 
-def test_report_prints_the_scorecard_json_and_exits_with_its_exit_code(
-    tmp_path, capsys
-):
+def test_report_prints_the_scorecard_and_exits_with_its_exit_code(tmp_path, capsys):
     from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
 
     document = {
@@ -107,7 +105,11 @@ def test_report_prints_the_scorecard_json_and_exits_with_its_exit_code(
         },
     }
     path = _saved(tmp_path, document)
+    other = _saved(tmp_path, {"task": "relevance", "report": {"cases": []}})
     expected = Scorecard.build([ReportDocument.load(path)], baseline="auto")
+    both = Scorecard.build(
+        [ReportDocument.load(path), ReportDocument.load(other)], baseline="auto"
+    )
 
     code = runner.main(["--report", str(path)])
 
@@ -115,6 +117,13 @@ def test_report_prints_the_scorecard_json_and_exits_with_its_exit_code(
         json.dumps(expected.to_json())
     )
     assert code == expected.exit_code == 1
+
+    code = runner.main(
+        ["--format", "markdown", "--report", str(path), "--report", str(other)]
+    )
+
+    assert capsys.readouterr().out == both.to_markdown()
+    assert code == both.exit_code == 1
 
 
 def test_execute_uses_engine_cli_and_reports_saved_failure(tmp_path, monkeypatch):
@@ -135,7 +144,8 @@ def test_execute_uses_engine_cli_and_reports_saved_failure(tmp_path, monkeypatch
         raise SystemExit("saved framework failure")
 
     monkeypatch.setattr(runner.evaluate, "_run", run)
-    summary, code = runner.execute_plan(plan)
+    scorecard, code = runner.execute_plan(plan)
+    summary = scorecard.to_json()
     assert code == 1
     assert summary["counts"]["terminal"] == 1
     assert summary["counts"]["execution_failures"] == 1
@@ -208,7 +218,8 @@ def test_script_cli_checkpoint_integration_without_model_calls(tmp_path, monkeyp
         )
     )
     plan = runner.resolve_plan("relevance")
-    summary, code = runner.execute_plan(plan)
+    scorecard, code = runner.execute_plan(plan)
+    summary = scorecard.to_json()
     assert code == 0
     assert summary["status"] == "completed"
     assert summary["scope"] == "full"
