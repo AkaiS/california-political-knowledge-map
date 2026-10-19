@@ -23,12 +23,6 @@ from knowledge_map.evaluation.tasks.extraction import (
     ExtractionOutput,
 )
 
-
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 # Nothing predicted RELEVANT, so RELEVANT precision has no denominator.
 NOTHING_RELEVANT = [
     (case_id, expected, IRRELEVANT) for case_id, expected, _ in CONFUSION_CASES

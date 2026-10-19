@@ -28,14 +28,15 @@ from .headline import (
     Role,
     is_failed_outcome,
 )
-from .rag_review import project_report
 
-BRANCHES = ("full_text", "dense", "structural")
-REVIEWER_SCRIPT = (
+_BRANCHES = ("full_text", "dense", "structural")
+# Retrieval and chat record retrieval branches, and the RAG reviewer reads them.
+_RAG_TASKS = ("retrieval", "chat")
+_REVIEWER_SCRIPT = (
     Path(__file__).resolve().parents[3] / "scripts" / "review_chat_eval.py"
 )
 DEFAULT_REVIEWER_PORT = 8766
-DIGEST_PREFIX = 12
+_DIGEST_PREFIX = 12
 Baseline = Literal["auto", "none"] | Path
 
 
@@ -385,12 +386,12 @@ class Axis(BaseModel, frozen=True):
                 "prompts "
                 + (
                     ", ".join(
-                        f"{name} {digest[:DIGEST_PREFIX]}"
+                        f"{name} {digest[:_DIGEST_PREFIX]}"
                         for name, digest in sorted(prompts.items())
                     )
                     or "none recorded"
                 ),
-                f"Data Set {sha[:DIGEST_PREFIX] if sha else 'unknown'}",
+                f"Data Set {sha[:_DIGEST_PREFIX] if sha else 'unknown'}",
                 f"headline {self.headline_version or 'none'}",
                 f"[report]({self.summary['report_path']})",
                 f"[trace]({trace})" if trace else "no trace",
@@ -660,12 +661,12 @@ def _metric_names(document: dict[str, Any], selected: list[dict]) -> set[str]:
         )
         if expected:
             labels = RetrievalExpectation.model_validate(expected)
-            for branch in (*BRANCHES, "fused"):
+            for branch in (*_BRANCHES, "fused"):
                 names.update(
                     retrieval_scores((), labels, prefix=branch, ks=(1, 5, 10, 50))
                 )
             names.update(("context_recall", "context_complete_evidence"))
-        for branch in (*BRANCHES, "fused"):
+        for branch in (*_BRANCHES, "fused"):
             names.update(f"{branch}_ndcg_at_{k}" for k in (1, 5, 10, 50))
     return names
 
@@ -689,25 +690,25 @@ def _summary(
     selection = experiment.get("selection", {})
     # A planned run records the population it asked for; the report's own
     # manifest and outcomes must match it.
-    expected_ids = selection.get("case_ids")
-    selected_ids = list(expected_ids) if expected_ids is not None else recorded_ids
+    planned_ids = selection.get("case_ids")
+    selected_ids = list(planned_ids) if planned_ids is not None else recorded_ids
     if selected_ids is None:
         # Historical reports have no selection manifest; the reported cases
         # are known outcomes, not evidence that the entire file was selected.
         selected_ids = [case["name"] for case in cases + failures]
     outcomes = cases + failures
     counts = Counter(case["name"] for case in outcomes)
-    expected_set = set(selected_ids)
-    extra = sorted(set(counts) - expected_set)
+    selected_set = set(selected_ids)
+    extra = sorted(set(counts) - selected_set)
     duplicate = sorted(name for name, count in counts.items() if count != 1)
     mismatch = (
         recorded_ids is not None
-        and expected_ids is not None
-        and set(recorded_ids) != expected_set
+        and planned_ids is not None
+        and set(recorded_ids) != selected_set
     )
     unresolved = [case_id for case_id in selected_ids if case_id not in counts]
     stage_failures: Counter[str] = Counter()
-    branches: dict[str, Counter] = {name: Counter() for name in BRANCHES}
+    branches: dict[str, Counter] = {name: Counter() for name in _BRANCHES}
     for case in cases:
         output = case.get("output")
         output = output if isinstance(output, dict) else {}
@@ -718,8 +719,8 @@ def _summary(
                 if isinstance(failure, dict)
                 else f"task:{output.get('failure_type')}"
             ] += 1
-        outcomes = output.get("branches")
-        if outcomes is None:
+        branch_outcomes = output.get("branches")
+        if branch_outcomes is None:
             answer = output.get("answer") or {}
             evidence = (
                 answer.get("evidence")
@@ -727,8 +728,8 @@ def _summary(
                 or output.get("result")
                 or {}
             )
-            outcomes = evidence.get("execution", {}).get("outcomes", [])
-        for branch in outcomes:
+            branch_outcomes = evidence.get("execution", {}).get("outcomes", [])
+        for branch in branch_outcomes:
             if branch.get("branch") in branches:
                 branches[branch["branch"]][branch.get("status", "unknown")] += 1
     if failures:
@@ -764,21 +765,6 @@ def _summary(
             "inclusion_policy": "Unweighted mean of recorded numeric case scores. Unscored failures and unresolved cases are missing, never silently counted as successes or zero.",
             "unavailable_reason": reason,
         }
-    if document["task"] in ("retrieval", "chat"):
-        projection = project_report(document)
-        for row in projection["metrics"]:
-            name = row["score"]
-            existing = metrics.get(name, {})
-            metrics[name] = {
-                **existing,
-                "mean": row["value"],
-                "scored_cases": row["scored_cases"],
-                "applicable_cases": row["applicable_cases"],
-                "selected_cases": len(selected_ids),
-                "missing_cases": max(0, len(selected_ids) - row["scored_cases"]),
-                "inclusion_policy": "Existing RAG reviewer measurement rules; the headline table's per-case mean, which leaves out failed cases, where the table holds the measurement, otherwise the unweighted mean of recorded or exactly replayed case scores. Unresolved measurements remain missing.",
-                "unavailable_reason": row["reason"] if row["value"] is None else None,
-            }
     integrity_errors = {
         "unexpected_case_ids": extra,
         "duplicate_case_ids": duplicate,
@@ -809,13 +795,13 @@ def _summary(
     reports_dir = (
         path.resolve().parent.parent if path.parent.name == document["task"] else None
     )
-    reviewable = document["task"] in ("retrieval", "chat") and reports_dir is not None
+    reviewable = document["task"] in _RAG_TASKS and reports_dir is not None
     reviewer_command = (
         shlex.join(
             [
                 "uv",
                 "run",
-                str(REVIEWER_SCRIPT),
+                str(_REVIEWER_SCRIPT),
                 "--mode",
                 "rag",
                 "--reports-dir",
@@ -836,7 +822,7 @@ def _summary(
         "counts": {
             "selected": len(selected_ids),
             "attempted": len(set(started) | set(counts)),
-            "terminal": len(expected_set & set(counts)),
+            "terminal": len(selected_set & set(counts)),
             # A quality measure sees only the selected cases that completed
             # without a recorded failure, so a reader needs that count beside
             # the failed and unresolved ones to know what the values rest on.
@@ -844,7 +830,7 @@ def _summary(
                 {
                     case["name"]
                     for case in cases
-                    if case["name"] in expected_set and not is_failed_outcome(case)
+                    if case["name"] in selected_set and not is_failed_outcome(case)
                 }
             ),
             "execution_failures": sum(stage_failures.values()),
@@ -865,7 +851,7 @@ def _summary(
             }
             for name, count in branches.items()
         }
-        if document["task"] in ("retrieval", "chat")
+        if document["task"] in _RAG_TASKS
         else {},
         "metrics": metrics,
         "assertions": assertions,

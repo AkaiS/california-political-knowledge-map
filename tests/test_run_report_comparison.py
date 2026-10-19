@@ -22,11 +22,6 @@ from knowledge_map.evaluation.tasks.extraction import (
 )
 
 
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 def with_fp_output(output):
     """The confusion cases with the "fp" case's output replaced by ``output``."""
 

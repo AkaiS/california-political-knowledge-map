@@ -27,11 +27,6 @@ from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
 ROOT = Path(__file__).parents[1]
 
 
-@pytest.fixture(autouse=True)
-def disable_telemetry(monkeypatch):
-    monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
-
-
 def scorecard(path, **options):
     return Scorecard.build([ReportDocument.load(path)], baseline="none", **options)
 
@@ -375,25 +370,23 @@ def test_historical_chat_answers_and_branches_use_real_schema():
     assert summary["headline"]["no_headline_reason"] == "predates_headline_metrics"
 
 
-def test_historical_rag_metrics_follow_the_reviewer_measurement_rules():
+def test_historical_rag_diagnostic_metrics_are_recorded_case_score_means():
     path = (
         ROOT
         / "evals/reports/retrieval/20261002T233848Z-e237389-local-gemma4-26b-1499ceec2201.json"
     )
-    summary = scorecard(path).to_json()
-    expected = {
-        "precision": (0.256, 25, 25),
-        "two_hop_recall": (0.75, 8, 25),
-        "recall": (pytest.approx(0.7042786635619782), 25, 25),
-    }
-    for metric, (mean, scored, applicable) in expected.items():
-        reported = summary["metrics"][f"fused_{metric}_at_10"]
-        assert reported["mean"] == mean
-        assert reported["scored_cases"] == scored
-        assert reported["applicable_cases"] == applicable
+    metrics = scorecard(path).to_json()["metrics"]
+    for metric, mean in {
+        "precision": 0.256,
+        "recall": pytest.approx(0.7042786635619782),
+    }.items():
+        reported = metrics[f"fused_{metric}_at_10"]
+        assert (reported["mean"], reported["scored_cases"]) == (mean, 25)
         assert reported["inclusion_policy"].startswith(
-            "Existing RAG reviewer measurement rules"
+            "Unweighted mean of recorded numeric case scores"
         )
+    # Replayed reviewer-only measurements stay in the RAG reviewer.
+    assert "fused_two_hop_recall_at_10" not in metrics
 
 
 def test_component_caught_failures_and_boolean_evaluators_are_retained(tmp_path):
