@@ -4,7 +4,8 @@
 operational Headline Metrics and says plainly that it has no quality metric.
 Declined, Deferred and needs-edit questions are reported separately, and
 latency is reported without a one-off script. This ticket adds the headline
-module's `Quantile` measure and the `by=` grouping on `Rate.operational`.
+module's `Quantile` measure. The table records only outcomes a user would
+observe, so it has no per-stage, per-branch or per-cohort rows.
 
 **Blocked by:** 01, Record Headline Metrics end to end for Relevance.
 
@@ -15,12 +16,13 @@ Labels: ready-for-agent
 - [ ] The headline rows are:
   - completed-answer rate;
   - Declined, Deferred and needs-edit rates;
-  - failure rate for each stage, grouped with `by=`;
   - p50 and p95 task duration;
   - the automatic `execution_failure_rate`.
+- [ ] Chat has no diagnostic rows.
 - [ ] Completed-answer and question-status tests are `Rate.operational`, so
   they count over the whole run population. A stage failure recorded in a
-  case's output counts toward its stage's rate.
+  case's output counts only toward `execution_failure_rate`; no row names a
+  stage.
 - [ ] The completed-answer rule reproduces the summary's current rule,
   including an answer whose introduction is null.
 - [ ] Question status comes from the recorded question preparation or
@@ -29,12 +31,11 @@ Labels: ready-for-agent
 - [ ] Task duration covers only cases that completed without a recorded
   failure. Pydantic Evals records no duration for a case whose task raised.
   The rows' scored counts show the gap.
-- [ ] The diagnostic rows are question-status rates by the authored cohort and
-  branch outcomes by status, both through `by=`.
 - [ ] The summary script's own chat completed-answer and decline rules are
   deleted. The run report module takes those counts from the table.
 - [ ] Engine-run tests cover each question status, a stage failure recorded in
-  output, a framework failure, and a null answer introduction.
+  output, a framework failure, a null answer introduction, and a headline
+  evaluator that raises.
 - [ ] Depth rule, tasks declare: every task touched supplies only a
   `HeadlineDefinition` built from the closed measure set and functions over a
   single case. No task defines a `ReportEvaluator`, builds table rows, or

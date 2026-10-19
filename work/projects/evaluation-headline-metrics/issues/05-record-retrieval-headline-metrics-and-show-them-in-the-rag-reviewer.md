@@ -20,13 +20,8 @@ Labels: completed
   - fused complete evidence@10;
   - final-context recall;
   - final-context complete evidence;
-  - each branch's completion rate;
   - the automatic `execution_failure_rate`.
-- [x] The diagnostic rows are:
-  - each branch's Recall@1/5/10/50, reciprocal rank and complete
-    evidence@5/10;
-  - Precision@k;
-  - NDCG@10, declared as `Unavailable` until relevance grades exist.
+- [x] Retrieval has no diagnostic rows.
 - [x] Compaction leaves the report's headline table byte-for-byte unchanged.
 - [x] The RAG reviewer calls only `Headline.from_analyses`. The mapping from
   its metric names to case score names moves out of the summary script and
@@ -47,3 +42,12 @@ Labels: completed
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test
   seam.
+
+## Comments
+
+- 2026-10-19, user decision during ticket 06: headline tables record only
+  outcomes a user would observe, never pipeline structure. retrieval-v1 was
+  trimmed in place: each branch's completion rate, every per-branch and
+  Precision@k diagnostic row, and the unavailable NDCG@10 row are gone. No
+  real run had recorded retrieval-v1, so the version name stays. The RAG
+  reviewer's case-level branch views are unchanged and serve error analysis.

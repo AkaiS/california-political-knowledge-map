@@ -1,8 +1,7 @@
 # 03: Record Coreference and Coreference annotator Headline Metrics
 
 **What to build:** Completed Coreference and Coreference annotator runs record
-the same agreement Headline Metrics, so their reports subtract. The full loop
-also reports what the Coreference Critic's decisions were worth. This ticket
+the same agreement Headline Metrics, so their reports subtract. This ticket
 adds the headline module's `Pooled` measure. B³ cluster
 scores use the four-field `Counts`, whose precision and recall numerators
 differ.
@@ -20,11 +19,7 @@ Labels: completed
   - canonical-entity accuracy, through `Pooled` over the same shared spans;
   - mention-span F1 as a per-case mean;
   - the automatic `execution_failure_rate`.
-- [x] Coreference's diagnostic rows are Critic rejection precision, rejection
-  recall and kept-correct rate. Each is a `Pooled` row over every judged
-  critic decision across cases.
-- [x] The annotator task declares the same critic rows as `Unavailable`, with
-  the reason that it makes no critic decisions.
+- [x] Neither task has diagnostic rows.
 - [x] Engine-run tests cover both tasks on shared fixtures, including a failed
   case, cases with no shared mention spans, and a B³ case where pooled
   precision and recall differ.
@@ -41,3 +36,13 @@ Labels: completed
   summary script's command line keeps its single smoke test and gains no other
   test. No test imports a measure's internals or adds a module-level test
   seam.
+
+## Comments
+
+- 2026-10-19, user decision during ticket 06: headline tables record only
+  outcomes a user would observe, never pipeline structure. The Coreference
+  Critic is a stage inside the loop, so coreference-v1 lost its three Critic
+  diagnostic rows and coreference_annotator-v1 lost the matching
+  `Unavailable` rows. No real run had recorded either version, so the version
+  names stay. The per-case Critic scores the case evaluators record are
+  unchanged and serve error analysis.

@@ -80,8 +80,8 @@ A reporting skill for agents is deferred; see Out of Scope.
 26. As the maintainer, I want coreference and the coreference annotator scored identically on agreement, so that the two reports subtract.
 27. As the maintainer, I want Policy Area Classification to report a macro F1 across areas, so that a common area can't hide failure on rare ones.
 28. As the maintainer, I want retrieval to lead with fused Recall@10 averaged per question, so that its headline follows the usual information-retrieval convention.
-29. As the maintainer, I want retrieval's branch completion rates in the headline, so that a failing branch is visible next to recall.
-30. As the maintainer, I want NDCG shown as unavailable, with its reason, until relevance grades exist, so that its absence is explained rather than silent.
+29. As the maintainer, I want retrieval's headline to hold only outcomes a user would observe, with branch breakdowns left to the RAG reviewer's case views, so that a change to the pipeline's structure never changes what two runs compare.
+30. As the maintainer, I want NDCG left out of retrieval's headline until relevance grades exist, so that the table holds only rows a run can compute.
 31. As the maintainer, I want an Unlabeled Set run to report operational counts and say plainly that it has no quality metric, so that chat numbers are never read as answer quality.
 32. As the maintainer, I want chat to report Declined, Deferred and needs-edit questions as separate rates, so that a policy refusal is never confused with missing coverage.
 33. As the maintainer, I want chat's completed-answer and question-status rules defined once, in its headline evaluator, so that the summary and the scorecard can't disagree on them.
@@ -142,8 +142,8 @@ SetAgreement(prefix, counts: Callable[[ReportCase], Counts], roles)   # pooled P
 Pooled(metric, contribution: Callable[[ReportCase], tuple[float, float] | None], role)
 PerLabel(prefix, counts: Callable[[ReportCase], Mapping[str, Counts]], reference_labels)
 CaseMean(score: str, role)            # mean of a recorded case score or assertion
-Rate.quality(metric, test, role, by=None)
-Rate.operational(metric, test, role, by=None)
+Rate.quality(metric, test, role)
+Rate.operational(metric, test, role)
 Quantile(metric, q, of, role)
 Unavailable(metric, aggregation, role, reason)
 ```
@@ -190,7 +190,7 @@ Hidden behind the module:
   `ca-map eval run`, so the run's exit code and `execution_failure_rate`
   share one definition of a failed case.
 - **The arithmetic.** Pooling, per-case means of recorded scores, rates,
-  quantiles, and per-label and per-group expansion. A zero denominator gives a
+  quantiles, and per-label expansion. A zero denominator gives a
   null value with a reason.
 - **Assembling the table.** Appending `execution_failure_rate`, ordering rows
   by role, and encoding the `TableResult`.
@@ -343,16 +343,22 @@ These rules hold the shape. Every ticket repeats them as acceptance criteria.
 
 ### Version 1 headline sets
 
+A headline set records only outcomes a user would observe: answered, declined,
+deferred or failed, latency, and the task's quality metrics. It never pins the
+pipeline's structure, so it has no per-stage, per-branch, per-cohort or
+Coreference Critic rows.
+Error analysis finds where a run broke.
+
 | Task | Label quality | Primary | Headline rows | Diagnostic rows |
 | --- | --- | --- | --- | --- |
 | Relevance | Gold | RELEVANT F1 (pooled) | RELEVANT precision and recall; accuracy; confusion-matrix counts | none |
 | Extraction | Silver | node F1 (pooled) | node precision and recall; relationship precision, recall and F1 (pooled); node and relationship F1 (per-case mean); ontology conformance rate | sub-label, node-property, claim-property and stance-alignment accuracy |
-| Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster F1 and canonical-entity accuracy, both pooled over mention spans both sides found; mention-span F1 (per-case mean) | Coreference Critic rejection precision, rejection recall and kept-correct rate |
-| Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | the Coreference Critic rows, each null with the reason "the annotator task makes no critic decisions" |
+| Coreference | Silver | mention-span F1 (pooled) | mention-span precision and recall; B³ cluster F1 and canonical-entity accuracy, both pooled over mention spans both sides found; mention-span F1 (per-case mean) | none |
+| Coreference annotator | Silver | mention-span F1 (pooled) | as Coreference | none |
 | Policy Area Classification | Silver | Policy Area F1 (pooled) | Policy Area precision and recall (pooled); label-macro F1; per-case mean F1 | per-area precision, recall and F1 |
 | Topic Assignment | Silver | assignment F1 (pooled) | assignment precision and recall (pooled); per-case mean F1 | none |
-| Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence; completion rate for each branch | each branch's Recall@1/5/10/50, reciprocal rank and complete evidence@5/10; Precision@k; NDCG@10, unavailable until relevance grades exist |
-| Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; Declined, Deferred and needs-edit rates; failure rate for each stage; p50 and p95 task duration | question-status rates by authored cohort; branch outcomes by status |
+| Retrieval | Silver | fused Recall@10 (per-case mean) | fused Recall@5; fused reciprocal rank; fused complete evidence@10; final-context recall; final-context complete evidence | none |
+| Chat | Unlabeled | none, with the reason "Unlabeled Set: no quality metric" | completed-answer rate; Declined, Deferred and needs-edit rates; p50 and p95 task duration | none |
 
 Every task's headline rows also include `execution_failure_rate`, which the
 table leaves out of each line to keep it readable.
@@ -362,19 +368,12 @@ Definitions that the table doesn't settle:
 - **B³ cluster scores and canonical-entity accuracy** are pooled over every
   mention span both sides found, across all cases. That weights each mention
   equally.
-- **Coreference Critic rows** are pooled over every judged critic decision
-  across cases. Rejection precision is wrong spans rejected over all rejections.
-  Rejection recall is wrong spans rejected over all wrong spans. The
-  kept-correct rate is correct spans kept over all correct spans. On the
-  annotator task the same rows are present with a null value and a reason,
-  following the contract's rule for metrics that can't be computed.
 - **Label-macro F1** is the mean F1 over the Policy Areas present in the
   selected cases' reference labels. Areas the model predicted but the
   reference never used appear only in pooled precision and in the per-area
   diagnostic rows.
 - **Retrieval** keeps the per-question mean because each question is one
-  information need. Precision@k stays diagnostic because unlisted chunks may be
-  relevant against provisional labels.
+  information need.
 - **The retrieval headline version** changes whenever the retrieval metric
   version recorded by compaction changes.
 - **Chat's completed-answer rule** is the one the summary script applies today.
@@ -382,9 +381,6 @@ Definitions that the table doesn't settle:
   status: Declined, Deferred or needs edit, using the glossary's distinction
   between Declined and Deferred. Today's summary counts only declines. Both
   rules move into the chat headline evaluator, and the summary reads the table.
-- **Chat's question-status rates by cohort** use the cohort each case's
-  authors recorded. This shows whether declined and deferred controls were
-  handled as intended without claiming answer quality.
 - **Chat's task duration** covers only cases that completed without a recorded
   failure. Pydantic Evals records no duration for a case whose task raised, so
   a framework failure has none to contribute. The row's scored count, below the
