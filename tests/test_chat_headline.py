@@ -64,6 +64,21 @@ def answered(case_id, introduction="Read these articles first."):
     )
 
 
+def assessed(case_id, status, **fields):
+    return (
+        case_id,
+        None,
+        ChatOutput(
+            question=f"Who supported {case_id}?",
+            approval_mode="direct_question",
+            assessment=QuestionAssessment(
+                status=status, explanation="An explanation.", **fields
+            ),
+            rendered_text="An explanation.",
+        ),
+    )
+
+
 def saved_run(directory, cases):
     path = run_task(
         directory,
@@ -110,18 +125,7 @@ def test_completed_answers_include_an_answer_whose_introduction_is_null(tmp_path
             [
                 answered("AB 1"),
                 answered("AB 2", introduction=None),
-                (
-                    "SB 3",
-                    None,
-                    ChatOutput(
-                        question="Who supported SB 3?",
-                        approval_mode="direct_question",
-                        assessment=QuestionAssessment(
-                            status="needs_edit", explanation="Name the bill."
-                        ),
-                        rendered_text="Name the bill.",
-                    ),
-                ),
+                assessed("SB 3", "needs_edit"),
             ],
         )
     )
@@ -137,21 +141,6 @@ def test_completed_answers_include_an_answer_whose_introduction_is_null(tmp_path
         "selected_cases": 3,
         "unavailable_reason": None,
     }
-
-
-def assessed(case_id, status, **fields):
-    return (
-        case_id,
-        None,
-        ChatOutput(
-            question=f"Who supported {case_id}?",
-            approval_mode="direct_question",
-            assessment=QuestionAssessment(
-                status=status, explanation="An explanation.", **fields
-            ),
-            rendered_text="An explanation.",
-        ),
-    )
 
 
 def test_declined_deferred_and_needs_edit_questions_are_separate_rates(tmp_path):
@@ -276,6 +265,27 @@ def test_failed_cases_complete_the_run_and_count_only_toward_execution_failures(
     for metric in ("task_duration_p50", "task_duration_p95"):
         row = rows[(metric, "quantile")]
         assert (row["scored_cases"], row["selected_cases"]) == (2, 4)
+
+
+def test_an_answer_rendered_before_cleanup_failed_still_counts_as_completed(
+    tmp_path,
+):
+    case_id, _, output = answered("AB 1")
+    output.failure = ChatFailure(
+        stage="cleanup",
+        kind="execution",
+        exception_type="RuntimeError",
+        diagnostic="Chat evaluation could not complete cleanup.",
+    )
+    rows = headline_rows(
+        saved_run(tmp_path, [(case_id, None, output), answered("AB 2")])
+    )
+
+    # The reader saw a Source Guide, so the summary's rule counts the answer;
+    # the recorded failure counts as an execution failure under no stage name.
+    assert rows[("completed_answer_rate", "rate")]["value"] == 1.0
+    assert rows[("execution_failure_rate", "rate")]["value"] == 1 / 2
+    assert rows[("task_duration_p50", "quantile")]["scored_cases"] == 1
 
 
 def test_a_run_where_every_case_failed_keeps_its_duration_rows_without_values(

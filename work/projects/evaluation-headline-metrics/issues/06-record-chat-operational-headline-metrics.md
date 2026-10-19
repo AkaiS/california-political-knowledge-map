@@ -21,8 +21,9 @@ Labels: ready-for-agent
 - [ ] Chat has no diagnostic rows.
 - [ ] Completed-answer and question-status tests are `Rate.operational`, so
   they count over the whole run population. A stage failure recorded in a
-  case's output counts only toward `execution_failure_rate`; no row names a
-  stage.
+  case's output counts toward `execution_failure_rate` and adds no row of its
+  own; no row names a stage. An answer rendered before a later stage failed
+  still counts as a completed answer, as the summary's rule does today.
 - [ ] The completed-answer rule reproduces the summary's current rule,
   including an answer whose introduction is null.
 - [ ] Question status comes from the recorded question preparation or

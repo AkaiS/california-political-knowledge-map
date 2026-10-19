@@ -371,13 +371,17 @@ def _question_status(
     A historical approval run records only its question preparation.
     """
 
-    def test(case: ReportCase | ReportCaseFailure) -> bool:
+    def has_status(case: ReportCase | ReportCaseFailure) -> bool:
         if not isinstance(case, ReportCase):
             return False
         decision = case.output.assessment or case.output.preparation
-        return getattr(decision, "status", None) == status
+        return decision is not None and decision.status == status
 
-    return test
+    return has_status
+
+
+def _task_duration(case: ReportCase) -> float:
+    return case.task_duration
 
 
 CHAT_HEADLINE = HeadlineDefinition(
@@ -398,13 +402,13 @@ CHAT_HEADLINE = HeadlineDefinition(
         Quantile(
             metric="task_duration_p50",
             q=0.5,
-            of=lambda case: case.task_duration,
+            of=_task_duration,
             role=Role.HEADLINE,
         ),
         Quantile(
             metric="task_duration_p95",
             q=0.95,
-            of=lambda case: case.task_duration,
+            of=_task_duration,
             role=Role.HEADLINE,
         ),
     ),
