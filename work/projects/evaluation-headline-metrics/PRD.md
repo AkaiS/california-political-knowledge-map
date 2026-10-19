@@ -381,6 +381,7 @@ Definitions that the table doesn't settle:
   status: Declined, Deferred or needs edit, using the glossary's distinction
   between Declined and Deferred. Today's summary counts only declines. Both
   rules move into the chat headline evaluator, and the summary reads the table.
+  Retrieval's headline reuses the completed-answer rule.
 - **Chat's task duration** covers only cases that completed without a recorded
   failure. Pydantic Evals records no duration for a case whose task raised, so
   a framework failure has none to contribute. The row's scored count, below the

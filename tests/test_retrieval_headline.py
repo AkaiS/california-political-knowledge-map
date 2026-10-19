@@ -26,8 +26,6 @@ from knowledge_map.evaluation.tasks.chat import ChatFailure
 from knowledge_map.evaluation.tasks.retrieval import RetrievalOutput
 from knowledge_map.schemas.retrieval import RetrievalAnswer
 
-NO_DENOMINATOR = "no case contributed to the denominator"
-
 
 @pytest.fixture(autouse=True)
 def disable_telemetry(monkeypatch):

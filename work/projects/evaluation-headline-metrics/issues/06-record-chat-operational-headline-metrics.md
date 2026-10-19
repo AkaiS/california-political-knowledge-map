@@ -60,3 +60,6 @@ Labels: completed
   Retrieval runs counted completed answers before this change and now give
   null, because `retrieval-v1` has no completed-answer row. Whether retrieval
   should keep that count is open for the user.
+- 2026-10-19, user decision: retrieval keeps the count. `retrieval-v1` now
+  records `completed_answer_rate` by the same rule Chat uses (ticket 05), so
+  a retrieval run's summary counts completed answers again.
