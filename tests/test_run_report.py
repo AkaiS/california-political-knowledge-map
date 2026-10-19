@@ -11,20 +11,17 @@ import shlex
 from pathlib import Path
 
 import pytest
-from engine_runs import run_task
-from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
-from test_chat_headline import (
+from chat_runs import (
     FRAMEWORK_FAILURE,
     STAGE_FAILURE,
     answered,
     assessed,
-    chat_input,
+    declined_in_preparation,
+    run_chat,
 )
+from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
 
-from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
-from knowledge_map.evaluation.tasks.chat import ChatOutput
-from knowledge_map.schemas.query_preparation import DeclinedQuestion
 
 ROOT = Path(__file__).parents[1]
 
@@ -110,6 +107,7 @@ def test_failed_headline_evaluator_summarizes_as_headline_evaluator_failed(tmp_p
         "rows": [],
     }
     assert summary["counts"]["evaluator_errors"] >= 1
+    assert summary["counts"]["completed_answers"] is None
     assert card.exit_code == 1
 
 
@@ -221,29 +219,18 @@ def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
 
 
 def test_chat_answers_and_declines_are_counted_from_the_recorded_headline(tmp_path):
-    path = run_task(
+    path = run_chat(
         tmp_path,
-        "chat",
         [
             answered("AB 1"),
             answered("AB 2", introduction=None),
             assessed("SB 1", "declined"),
-            # A historical approval run records only its preparation.
-            (
-                "SB 2",
-                None,
-                ChatOutput(
-                    question="Who supported SB 2?",
-                    preparation=DeclinedQuestion(message="Outside policy."),
-                ),
-            ),
+            declined_in_preparation("SB 2"),
             assessed("SB 3", "deferred", recoverable_portion="Reporting since 2024."),
             assessed("SB 4", "needs_edit"),
             STAGE_FAILURE,
             FRAMEWORK_FAILURE,
         ],
-        task_input=chat_input,
-        label_quality=LabelQuality.UNLABELED,
     )
     original = path.read_bytes()
 
@@ -257,6 +244,17 @@ def test_chat_answers_and_declines_are_counted_from_the_recorded_headline(tmp_pa
     assert summary["counts"]["execution_failures"] == 2
     assert card.exit_code == 1
     assert path.read_bytes() == original
+
+    # Outputs that no longer show any answer or decline leave the counts as
+    # the recorded table states them.
+    document = json.loads(original)
+    for case in document["report"]["cases"]:
+        case["output"] = {"question": case["output"]["question"]}
+    rewritten = tmp_path / "rewritten" / "run.json"
+    rewritten.parent.mkdir()
+    rewritten.write_text(json.dumps(document))
+    counts = scorecard(rewritten).to_json()["counts"]
+    assert (counts["completed_answers"], counts["declined"]) == (2, 2)
 
 
 def test_summary_detects_duplicate_and_unexpected_ids(tmp_path):

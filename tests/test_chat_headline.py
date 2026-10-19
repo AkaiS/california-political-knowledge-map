@@ -7,23 +7,20 @@ definition, then reads the saved Evaluation Report. No model is called.
 
 from __future__ import annotations
 
-import asyncio
 import json
 
 import pytest
-from engine_runs import headline_rows, headline_table, run_task
-from test_retrieval import COVERAGE, coordinator
-
-from knowledge_map.evaluation import LabelQuality
-from knowledge_map.evaluation.tasks.chat import ChatFailure, ChatInput, ChatOutput
-from knowledge_map.schemas.query_preparation import (
-    DeclinedQuestion,
-    QueryRewrite,
-    QuestionAssessment,
+from chat_runs import (
+    FRAMEWORK_FAILURE,
+    STAGE_FAILURE,
+    answered,
+    assessed,
+    declined_in_preparation,
+    run_chat,
 )
-from knowledge_map.schemas.retrieval import RetrievalAnswer
+from engine_runs import headline_rows, headline_table
 
-ALLOWED = QuestionAssessment(status="allowed")
+from knowledge_map.evaluation.tasks.chat import ChatFailure
 
 
 @pytest.fixture(autouse=True)
@@ -31,63 +28,8 @@ def disable_telemetry(monkeypatch):
     monkeypatch.setattr("knowledge_map.evaluation.engine.setup_telemetry", lambda: None)
 
 
-def chat_input(case_id):
-    return ChatInput(question=f"Who supported {case_id}?")
-
-
-def answer(case_id, introduction):
-    package = asyncio.run(
-        coordinator().run(
-            QueryRewrite(
-                question=f"Who supported {case_id}?",
-                relational=False,
-                assessment=ALLOWED,
-            ),
-            coverage=COVERAGE,
-            relevant_collection_ids=("reporting",),
-        )
-    )
-    return RetrievalAnswer(evidence=package, introduction=introduction)
-
-
-def answered(case_id, introduction="Read these articles first."):
-    return (
-        case_id,
-        None,
-        ChatOutput(
-            question=f"Who supported {case_id}?",
-            approval_mode="direct_question",
-            assessment=ALLOWED,
-            answer=answer(case_id, introduction),
-            rendered_text="A rendered Source Guide.",
-        ),
-    )
-
-
-def assessed(case_id, status, **fields):
-    return (
-        case_id,
-        None,
-        ChatOutput(
-            question=f"Who supported {case_id}?",
-            approval_mode="direct_question",
-            assessment=QuestionAssessment(
-                status=status, explanation="An explanation.", **fields
-            ),
-            rendered_text="An explanation.",
-        ),
-    )
-
-
 def saved_run(directory, cases):
-    path = run_task(
-        directory,
-        "chat",
-        cases,
-        task_input=chat_input,
-        label_quality=LabelQuality.UNLABELED,
-    )
-    return json.loads(path.read_text())
+    return json.loads(run_chat(directory, cases).read_text())
 
 
 def test_unlabeled_run_says_it_has_no_quality_metric_and_reports_outcomes(tmp_path):
@@ -150,15 +92,7 @@ def test_declined_deferred_and_needs_edit_questions_are_separate_rates(tmp_path)
             [
                 answered("AB 1"),
                 assessed("SB 1", "declined"),
-                # A historical approval run records only its preparation.
-                (
-                    "SB 2",
-                    None,
-                    ChatOutput(
-                        question="Who supported SB 2?",
-                        preparation=DeclinedQuestion(message="Outside policy."),
-                    ),
-                ),
+                declined_in_preparation("SB 2"),
                 assessed(
                     "SB 3", "deferred", recoverable_portion="Reporting since 2024."
                 ),
@@ -177,26 +111,6 @@ def test_declined_deferred_and_needs_edit_questions_are_separate_rates(tmp_path)
         "needs_edit_rate": ("headline", 1.0, 5.0, 1 / 5),
     }
     assert rows[("completed_answer_rate", "rate")]["value"] == 1 / 5
-
-
-# The Chat Session failed after an allowed assessment, and kept its trail.
-STAGE_FAILURE = (
-    "AB 9",
-    None,
-    ChatOutput(
-        question="Who supported AB 9?",
-        approval_mode="direct_question",
-        assessment=ALLOWED,
-        failure=ChatFailure(
-            stage="retrieval_and_guidance",
-            kind="execution",
-            exception_type="RuntimeError",
-            diagnostic="Chat evaluation could not complete retrieval_and_guidance.",
-        ),
-    ),
-)
-# The task raised, so Pydantic Evals records a case failure and no duration.
-FRAMEWORK_FAILURE = ("AB 10", None, RuntimeError("transport exhausted"))
 
 
 def test_task_duration_quantiles_cover_only_cases_that_succeeded(tmp_path):

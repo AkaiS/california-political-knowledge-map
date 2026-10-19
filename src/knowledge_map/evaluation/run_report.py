@@ -141,15 +141,16 @@ def _axis(document: ReportDocument, reviewer_port: int) -> Axis:
         ) or NoHeadline(reason="headline_evaluator_failed")
     # The task's headline evaluator owns the completed-answer and decline
     # rules; a report without its table has no such counts.
-    if isinstance(headline, Headline):
-        summary["counts"]["completed_answers"] = _recorded_count(
-            headline, "completed_answer_rate"
-        )
-        summary["counts"]["declined"] = _recorded_count(headline, "declined_rate")
+    summary["counts"]["completed_answers"] = _recorded_count(
+        headline, "completed_answer_rate"
+    )
+    summary["counts"]["declined"] = _recorded_count(headline, "declined_rate")
     return Axis(headline_version=version, headline=headline, summary=summary)
 
 
-def _recorded_count(headline: Headline, metric: str) -> int | None:
+def _recorded_count(headline: Headline | NoHeadline, metric: str) -> int | None:
+    if isinstance(headline, NoHeadline):
+        return None
     row = headline.row(metric, Aggregation.RATE)
     return None if row is None or row.numerator is None else int(row.numerator)
 
@@ -234,9 +235,9 @@ def _summary(
                 if isinstance(failure, dict)
                 else f"task:{output.get('failure_type')}"
             ] += 1
-        answer = output.get("answer") or {}
         outcomes = output.get("branches")
         if outcomes is None:
+            answer = output.get("answer") or {}
             evidence = (
                 answer.get("evidence")
                 or output.get("retrieval")
@@ -353,8 +354,6 @@ def _summary(
             "selected": len(selected_ids),
             "attempted": len(set(started) | set(counts)),
             "terminal": len(expected_set & set(counts)),
-            "completed_answers": None,
-            "declined": None,
             "execution_failures": sum(stage_failures.values()),
             "unresolved": len(unresolved),
             "evaluator_errors": sum(len(c.get("evaluator_failures", [])) for c in cases)
