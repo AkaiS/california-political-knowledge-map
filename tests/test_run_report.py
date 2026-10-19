@@ -11,9 +11,20 @@ import shlex
 from pathlib import Path
 
 import pytest
+from engine_runs import run_task
 from relevance_runs import CONFUSION_CASES, RELEVANT, run_relevance
+from test_chat_headline import (
+    FRAMEWORK_FAILURE,
+    STAGE_FAILURE,
+    answered,
+    assessed,
+    chat_input,
+)
 
+from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
+from knowledge_map.evaluation.tasks.chat import ChatOutput
+from knowledge_map.schemas.query_preparation import DeclinedQuestion
 
 ROOT = Path(__file__).parents[1]
 
@@ -192,8 +203,8 @@ def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
         "selected": 4,
         "attempted": 3,
         "terminal": 3,
-        "completed_answers": 1,
-        "declined": 0,
+        "completed_answers": None,
+        "declined": None,
         "execution_failures": 2,
         "unresolved": 1,
         "evaluator_errors": 0,
@@ -209,70 +220,42 @@ def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
     assert card.exit_code == 1
 
 
-def test_direct_and_historical_declines_are_counted_without_rewriting_report(
-    tmp_path,
-):
-    document = {
-        "task": "chat",
-        "label_quality": "unlabeled",
-        "report": {
-            "cases": [
-                {
-                    "name": "historical-decline",
-                    "output": {
-                        "preparation": {
-                            "status": "declined",
-                            "message": "Forecasts are outside the question policy.",
-                        }
-                    },
-                },
-                {
-                    "name": "direct-decline",
-                    "output": {
-                        "approval_mode": "direct_question",
-                        "preparation": None,
-                        "assessment": {
-                            "status": "declined",
-                            "explanation": "Forecasts are outside the question policy.",
-                        },
-                    },
-                },
-                {
-                    "name": "needs-edit",
-                    "output": {
-                        "assessment": {
-                            "status": "needs_edit",
-                            "explanation": "Name the bill in the complete question.",
-                        }
-                    },
-                },
-                {
-                    "name": "deferred-with-guidance",
-                    "output": {
-                        "assessment": {
-                            "status": "deferred",
-                            "explanation": "The collection has a limited date range.",
-                            "recoverable_portion": "Reporting inside that range.",
-                        },
-                        "answer": {"introduction": None, "source_notes": []},
-                        "rendered_text": "Read the available reporting.",
-                    },
-                },
-            ]
-        },
-    }
-    path = _saved(tmp_path, document)
+def test_chat_answers_and_declines_are_counted_from_the_recorded_headline(tmp_path):
+    path = run_task(
+        tmp_path,
+        "chat",
+        [
+            answered("AB 1"),
+            answered("AB 2", introduction=None),
+            assessed("SB 1", "declined"),
+            # A historical approval run records only its preparation.
+            (
+                "SB 2",
+                None,
+                ChatOutput(
+                    question="Who supported SB 2?",
+                    preparation=DeclinedQuestion(message="Outside policy."),
+                ),
+            ),
+            assessed("SB 3", "deferred", recoverable_portion="Reporting since 2024."),
+            assessed("SB 4", "needs_edit"),
+            STAGE_FAILURE,
+            FRAMEWORK_FAILURE,
+        ],
+        task_input=chat_input,
+        label_quality=LabelQuality.UNLABELED,
+    )
     original = path.read_bytes()
 
     card = scorecard(path)
     summary = card.to_json()
 
-    assert card.exit_code == 0
-    assert summary["counts"]["selected"] == summary["counts"]["terminal"] == 4
+    assert summary["headline"]["version"] == "chat-v1"
+    assert summary["counts"]["selected"] == summary["counts"]["terminal"] == 8
+    assert summary["counts"]["completed_answers"] == 2
     assert summary["counts"]["declined"] == 2
-    assert summary["counts"]["completed_answers"] == 1
-    assert summary["counts"]["execution_failures"] == 0
-    assert summary["counts"]["unresolved"] == 0
+    assert summary["counts"]["execution_failures"] == 2
+    assert card.exit_code == 1
     assert path.read_bytes() == original
 
 
@@ -336,7 +319,10 @@ def test_unlabeled_and_historical_reports_are_explicit(tmp_path):
     summary = scorecard(_saved(tmp_path, document)).to_json()
     assert summary["scope"] == "unknown"
     assert summary["status"] == "historical_selection_unknown"
-    assert summary["counts"]["declined"] == 1
+    # Answers and declines are counted only by a recorded headline table.
+    assert summary["headline"]["no_headline_reason"] == "predates_headline_metrics"
+    assert summary["counts"]["declined"] is None
+    assert summary["counts"]["completed_answers"] is None
     assert (
         summary["metrics_unavailable_reason"]
         == "This Data Set has no reference judgments."
@@ -369,7 +355,7 @@ def test_historical_chat_answers_and_branches_use_real_schema():
         / "evals/reports/chat/20261007T201147Z-35d1475-local-gemma4-26b-1499ceec2201.json"
     )
     summary = scorecard(path).to_json()
-    assert summary["counts"]["completed_answers"] == 2
+    assert summary["counts"]["completed_answers"] is None
     assert summary["branch_completion"]["dense"]["succeeded"] == 2
     assert summary["branch_completion"]["dense"]["unrecorded"] == 0
     assert summary["provenance"]["experiment_metadata"]["prompts"]

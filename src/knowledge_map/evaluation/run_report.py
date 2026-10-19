@@ -19,7 +19,7 @@ from urllib.parse import quote
 
 from pydantic import BaseModel
 
-from .headline import Headline, is_failed_outcome
+from .headline import Aggregation, Headline, is_failed_outcome
 from .rag_review import project_report
 
 BRANCHES = ("full_text", "dense", "structural")
@@ -139,7 +139,19 @@ def _axis(document: ReportDocument, reviewer_port: int) -> Axis:
         headline = Headline.from_analyses(
             content["report"].get("analyses") or []
         ) or NoHeadline(reason="headline_evaluator_failed")
+    # The task's headline evaluator owns the completed-answer and decline
+    # rules; a report without its table has no such counts.
+    if isinstance(headline, Headline):
+        summary["counts"]["completed_answers"] = _recorded_count(
+            headline, "completed_answer_rate"
+        )
+        summary["counts"]["declined"] = _recorded_count(headline, "declined_rate")
     return Axis(headline_version=version, headline=headline, summary=summary)
+
+
+def _recorded_count(headline: Headline, metric: str) -> int | None:
+    row = headline.row(metric, Aggregation.RATE)
+    return None if row is None or row.numerator is None else int(row.numerator)
 
 
 def _metric_names(document: dict[str, Any], selected: list[dict]) -> set[str]:
@@ -210,8 +222,6 @@ def _summary(
         and set(recorded_ids) != expected_set
     )
     unresolved = [case_id for case_id in selected_ids if case_id not in counts]
-    completed_answers = 0
-    declined = 0
     stage_failures: Counter[str] = Counter()
     branches: dict[str, Counter] = {name: Counter() for name in BRANCHES}
     for case in cases:
@@ -225,11 +235,6 @@ def _summary(
                 else f"task:{output.get('failure_type')}"
             ] += 1
         answer = output.get("answer") or {}
-        if output.get("rendered_text") and answer and "introduction" in answer:
-            completed_answers += 1
-        decision = output.get("assessment") or output.get("preparation") or {}
-        if decision.get("status") == "declined":
-            declined += 1
         outcomes = output.get("branches")
         if outcomes is None:
             evidence = (
@@ -348,8 +353,8 @@ def _summary(
             "selected": len(selected_ids),
             "attempted": len(set(started) | set(counts)),
             "terminal": len(expected_set & set(counts)),
-            "completed_answers": completed_answers,
-            "declined": declined,
+            "completed_answers": None,
+            "declined": None,
             "execution_failures": sum(stage_failures.values()),
             "unresolved": len(unresolved),
             "evaluator_errors": sum(len(c.get("evaluator_failures", [])) for c in cases)
