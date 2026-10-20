@@ -181,6 +181,54 @@ def complete_chat(app):
         return events(submit_guide(client, json=payload))
 
 
+def test_article_cap_preserves_other_articles_in_guidance_and_records_omissions(
+    chat_capture,
+):
+    prompts = []
+    branches = {branch: Branch(branch, ()) for branch in RetrievalBranch}
+    rows = tuple(
+        candidate(RetrievalBranch.FULL_TEXT, f"insurance-{rank}", rank).model_copy(
+            update={"source_article_id": "https://example.com/insurance"}
+        )
+        for rank in range(1, 5)
+    )
+    branches[RetrievalBranch.FULL_TEXT] = Branch(
+        RetrievalBranch.FULL_TEXT,
+        (*rows, candidate(RetrievalBranch.FULL_TEXT, "housing", 5)),
+    )
+    loaded = []
+
+    async def store(fused):
+        loaded.append(fused.chunk_id)
+        return await load_grounding(fused)
+
+    complete_chat(
+        evidence_chat(
+            branches,
+            prompts=prompts,
+            load_grounding=store,
+            context_limits=EvidenceContextLimits(max_passages_per_article=2),
+        )
+    )
+
+    context = json.loads(prompts[-1])
+    assert [
+        source["citation"]["source_article_id"] for source in context["sources"]
+    ] == [
+        "https://example.com/insurance",
+        "https://example.com/housing",
+    ]
+    assert loaded == ["insurance-1", "insurance-2", "housing"]
+    assembly = stage_spans(chat_capture)["chat_session.evidence_assembly"]["attributes"]
+    assert assembly["limits"]["max_passages_per_article"] == 2
+    assert assembly["selected_chunk_ids"] == loaded
+    assert assembly["omitted_chunks"] == [
+        {"chunk_id": "insurance-3", "reason": "article_passage_limit"},
+        {"chunk_id": "insurance-4", "reason": "article_passage_limit"},
+    ]
+    assert assembly["context"]["omitted_passages"] == context["omitted_passages"] == 2
+
+
 def test_assembly_records_actual_selection_omission_reasons_and_measured_context(
     chat_capture,
 ):
@@ -314,7 +362,11 @@ def test_assembly_failure_records_a_safe_cause_without_a_retrieval_answer(
     assert failed["status"] == "failed"
     assert failed["failure_kind"] == kind
     assert failed["diagnostic"] == "Grounding Evidence could not be assembled."
-    assert failed["limits"] == {"character_limit": 24000, "max_passages": 12}
+    assert failed["limits"] == {
+        "character_limit": 24000,
+        "max_passages": 12,
+        "max_passages_per_article": 3,
+    }
     assert not {"selected_chunk_ids", "context"} & failed.keys()
     assert "private" not in json.dumps(
         [application_attributes(span) for span in spans.values()]

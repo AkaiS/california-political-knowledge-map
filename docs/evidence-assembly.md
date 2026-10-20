@@ -49,9 +49,17 @@ and month. No monthly detail is loaded automatically.
 
 ## Context budget
 
-`EvidenceContextLimits` defaults to 24,000 characters and 12 passages. Both limits
-must be positive integers. These are initial configurable limits, not measured
-retrieval-quality recommendations.
+`EvidenceContextLimits` defaults to 24,000 characters, 12 passages total, and
+`max_passages_per_article=3`. All limits must be positive integers. These are
+initial configurable limits, not measured retrieval-quality recommendations.
+
+The article limit prevents repeated chunks from one Source Article from using
+the whole context before other articles can be assessed. It retains that
+article's highest-ranked passages that fit the character budget. Once the
+article reaches its limit, further chunks from it are skipped before loading
+their stored wording, and selection continues to other articles. Oversized
+passages do not count toward the article limit. This bounds representation per
+article without changing fusion scores or adding a relevance judgement.
 
 `render_evidence_context(package)` is the exact evidence input to supply to the
 Chat Agent. Its compact JSON contains:
@@ -79,6 +87,10 @@ to fill the budget. `omitted_passages` counts unselected fused candidates;
 pre-fusion candidates remain in the execution audit. If mandatory context alone
 cannot fit, assembly returns a failure instead of dropping coverage or branch
 disclosures.
+
+The assembly observation records the configured limits and identifies chunks
+skipped for the article cap with `article_passage_limit`. They remain included
+in the omitted passage count and the retained execution record.
 
 Assembly failure preserves the entire execution record and adds no failed
 retrieval branch. Assembly neither summarizes evidence nor makes another model

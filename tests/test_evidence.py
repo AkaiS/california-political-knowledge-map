@@ -88,6 +88,7 @@ class EvidenceStore:
             ),
         )
 
+
 def assemble(store, retained, *, coverage=None, relevant_collection_ids=(), **kwargs):
     return asyncio.run(
         EvidenceAssembler(load_grounding=store.load_grounding).assemble(
@@ -303,6 +304,76 @@ def test_character_budget_skips_an_oversized_passage_and_keeps_later_evidence():
         store, retained, limits=EvidenceContextLimits(character_limit=2000)
     )
     assert result == repeated
+
+
+def test_one_articles_chunks_cannot_crowd_housing_reporting_out_of_evidence():
+    insurance = "https://example.com/insurance"
+    housing = "https://example.com/housing-legislation"
+    retained = execution(
+        *(candidate(f"insurance-{rank}", insurance, rank) for rank in range(1, 15)),
+        candidate("housing", housing, 15),
+    )
+    insurance_story = Story(url=insurance, title="Insurance myths")
+    housing_story = Story(url=housing, title="Housing legislation")
+    rows = {
+        f"insurance-{rank}": ("Property insurance coverage.", insurance_story)
+        for rank in range(1, 15)
+    }
+    rows["housing"] = ("Reporting on the housing bill.", housing_story)
+    loaded = []
+
+    class RecordingStore(EvidenceStore):
+        async def load_grounding(self, candidate):
+            loaded.append(candidate.chunk_id)
+            return await super().load_grounding(candidate)
+
+    result = assemble(RecordingStore(rows), retained)
+
+    assert isinstance(result, EvidencePackage)
+    assert [source.citation.source_article_id for source in result.sources] == [
+        insurance,
+        housing,
+    ]
+    assert [p.candidate.chunk_id for p in result.sources[0].passages] == [
+        "insurance-1",
+        "insurance-2",
+        "insurance-3",
+    ]
+    assert loaded == ["insurance-1", "insurance-2", "insurance-3", "housing"]
+    assert result.sources[1].passages[0].text == "Reporting on the housing bill."
+    assert result.context.omitted_passages == 11
+    assert result.context.used == len(render_evidence_context(result))
+    assert result.execution == retained
+
+
+def test_article_passage_limit_counts_only_passages_that_fit_the_character_budget():
+    article = "https://example.com/a"
+    other = "https://example.com/b"
+    retained = execution(
+        candidate("oversized", article, 1),
+        candidate("best-fitting", article, 2),
+        candidate("lower-ranked", article, 3),
+        candidate("other", other, 4),
+    )
+    rows = {
+        "oversized": ("Long reporting. " * 1000, None),
+        "best-fitting": ("Relevant reporting.", None),
+        "lower-ranked": ("More reporting.", None),
+        "other": ("Another article's evidence.", None),
+    }
+
+    result = assemble(
+        EvidenceStore(rows),
+        retained,
+        limits=EvidenceContextLimits(character_limit=4000, max_passages_per_article=1),
+    )
+
+    assert isinstance(result, EvidencePackage)
+    assert [p.candidate.chunk_id for s in result.sources for p in s.passages] == [
+        "best-fitting",
+        "other",
+    ]
+    assert result.context.omitted_passages == 2
 
 
 @pytest.mark.parametrize(
@@ -585,7 +656,9 @@ def test_rendered_context_distinguishes_empty_search_failure_and_budget_omission
     ]
 
 
-@pytest.mark.parametrize("field", ["character_limit", "max_passages"])
+@pytest.mark.parametrize(
+    "field", ["character_limit", "max_passages", "max_passages_per_article"]
+)
 @pytest.mark.parametrize("value", [0, -1, True, 1.5, "12"])
 def test_context_limits_require_positive_integer_counts(field, value):
     with pytest.raises(ValidationError):
