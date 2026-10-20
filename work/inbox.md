@@ -494,6 +494,104 @@ shaped into executable work.
   section. Questions contrasting accounts without opposing arguments should
   keep their question-specific group labels rather than force pro/against.
 
+## Evaluation headline metrics retrospective, 2026-10-19
+
+Captured on 2026-10-19 from the retrospective of the ticket-conductor run that
+built [Evaluation headline metrics](projects/evaluation-headline-metrics/PRD.md).
+None of these entries has been triaged.
+
+- **HM-01 · P2:** Record the principle "headline rows are outcomes a user would
+  see, not pipeline structure" as a new ADR (ADRs are never amended), with a
+  pointer from `docs/evaluation/README.md`. The user set this principle during
+  ticket 06. It lives now only in the PRD and the tickets.
+  Labels: needs-triage
+- **HM-02 · P2:** Give the code-review skill's Spec reviewer a category for
+  "behaviour removed or narrowed by the diff, and whether the spec asked for
+  that". Evidence: a trim meant to drop pipeline-structure rows also dropped
+  retrieval's completed-answer count, and the Spec reviewer missed it, because
+  its categories (a) to (c) all look at what the spec asks for. The user wants
+  to decide changes to skills personally.
+  Labels: needs-triage
+- **HM-03 · P2:** Ticket-conductor skill fixes:
+  - enter the target worktree during preflight
+  - correct the skill and glossary paths
+  - one bounded piece per agent
+  - challenge a question's scope before relaying it to the user
+  - a shared brief file
+
+  Questions:
+  - Should the skill find the glossary, ADRs and other skills by reading each
+    repo's docs/agents/ pointers, or keep fixed paths and just correct them?
+  - Should the shared brief file become a required preflight step, written to
+    the scratchpad, or stay at the conductor's discretion?
+  - Should "challenge scope before relaying a question" go in the skill, or
+    nowhere?
+
+  Labels: needs-triage
+- **HM-04 · P2:** Add ruff to CI (`.github/workflows/ci.yml`), after fixing the
+  existing violations in `data_set.py` and `relevance.py`.
+
+  Questions:
+  - Both `ruff check` and `ruff format --check`, or only `check`?
+  - Should the fixes to those two files go on their own branch?
+
+  Labels: needs-triage
+- **HM-05 · P2:** A Claude Code PreToolUse hook that blocks global python,
+  python3 and pip. Agents ran them several times despite the uv rule.
+
+  Questions:
+  - Should it go in the repo's checked-in .claude/settings.json or in
+    user-level settings?
+  - Should it also block `uv run python` heredocs used for one-off file edits?
+
+  Labels: needs-triage
+- **HM-06 · P1:** A deterministic multi-case transport test through the
+  evaluation command line. A live 5-case run failed 2 of 5 cases with "Event
+  loop is closed". Commit `ef3da13a` on the unmerged branch
+  `refs/heads/claude/eval-closed-event-loop` fixes this and adds
+  `tests/test_evaluation_event_loop.py`.
+
+  Questions:
+  - Is that test enough, or is a command-line-level test still wanted?
+  - Should that branch be merged first?
+
+  Labels: needs-triage
+- **HM-07 · P3:** A word limit on agent reports.
+
+  Questions:
+  - Should it go in the ticket-conductor skill or in each brief?
+  - What number? (The Spec reviewer uses 400 words.)
+
+  Labels: needs-triage
+- **HM-08 · P2:** Deduplicate `CLAUDE.md` and `AGENTS.md`, and fix the stale CI
+  line in `CLAUDE.md`.
+
+  Questions:
+  - Which file is the source of truth? Should the other become a symlink, or a
+    one-line pointer?
+  - Should the CI line describe what ci.yml runs, or just point at the file?
+
+  Labels: needs-triage
+- **HM-09 · P2:** Open questions from the headline-metrics final review:
+  - Q1: the report JSON's `metrics` block reports per-score means that can
+    disagree with the headline rows for retrieval. Recommendation: drop from
+    that block the scores the headline table holds.
+  - Q2: label-macro F1 is tagged as a `pooled` measure. Recommendation: keep
+    it.
+  - Q3: the v1 headline definitions were edited in place, against ADR 0026's
+    immutability. Recommendation: the PRD note may be enough.
+  - Q4: glossary entries for Scorecard and axis. Recommendation: skip them.
+
+  Labels: needs-triage
+- **HM-10 · P2:** Housekeeping:
+  - stash entry `d98a1c3f` ("ticket06-wip-overloaded-agent-0d836f") holds
+    abandoned ticket 06 work and can be dropped
+  - two untracked local Relevance reports under `evals/reports/relevance/`
+    (`20261020T001625Z-…` and `20261020T001703Z-…`) need a keep-or-delete
+    decision
+
+  Labels: needs-triage
+
 ## Loose-note ID crosswalk
 
 The `LN-*` identifiers were retired on 2026-07-25. Use this table to resolve any
