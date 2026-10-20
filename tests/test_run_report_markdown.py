@@ -9,6 +9,8 @@ that differ on every run are replaced by names before comparing.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from chat_runs import STAGE_FAILURE, answered, assessed, run_chat
 from engine_runs import run_task
@@ -45,7 +47,7 @@ def test_one_axis_renders_its_headline_against_the_latest_comparable_run(tmp_pat
         "## relevance: relevant_f1 0.000 (-0.667 against the baseline)\n"
         "\n"
         "Population: label quality gold, selection scope full; "
-        "5 selected, 5 scored, 0 failed, 0 unresolved.\n"
+        "5 selected, 5 scored, 0 failed, 0 unresolved, 0 evaluator errors.\n"
         "\n"
         "Baseline: `<baseline>` (comparable).\n"
         "\n"
@@ -92,7 +94,7 @@ def test_report_without_a_headline_renders_its_population_and_reason(tmp_path):
         "## relevance: no Headline Metrics\n"
         "\n"
         "Population: label quality gold, selection scope full; "
-        "3 selected, 1 scored, 0 failed, 2 unresolved.\n"
+        "3 selected, 1 scored, 0 failed, 2 unresolved, 0 evaluator errors.\n"
         "\n"
         "Baseline: none (not requested).\n"
         "\n"
@@ -313,7 +315,7 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "## relevance: relevant_f1 0.000 (-0.667 against the baseline)\n"
         "\n"
         "Population: label quality gold, selection scope full; 5 selected, 5 "
-        "scored, 0 failed, 0 unresolved.\n"
+        "scored, 0 failed, 0 unresolved, 0 evaluator errors.\n"
         "\n"
         "Baseline: `<baseline>` (comparable).\n"
         "\n"
@@ -343,7 +345,7 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "## chat: answer_quality unavailable (Unlabeled Set: no quality metric)\n"
         "\n"
         "Population: label quality unlabeled, selection scope full; 3 selected,"
-        " 2 scored, 1 failed, 0 unresolved.\n"
+        " 2 scored, 1 failed, 0 unresolved, 0 evaluator errors.\n"
         "\n"
         "Baseline: none (no earlier run).\n"
         "\n"
@@ -370,7 +372,7 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "denominator)\n"
         "\n"
         "Population: label quality silver, selection scope full; 1 selected, 1 "
-        "scored, 0 failed, 0 unresolved.\n"
+        "scored, 0 failed, 0 unresolved, 0 evaluator errors.\n"
         "\n"
         "Baseline: none (no earlier run).\n"
         "\n"
@@ -426,3 +428,49 @@ def test_several_axes_open_with_one_row_per_axis_then_each_scorecard(tmp_path):
         "\n"
         "</details>\n"
     )
+
+
+def with_case_evaluator_error(path, case_id):
+    """Save ``path`` again with one case evaluator failure on ``case_id``.
+
+    The headline table stays as recorded, the way a report reads when a case
+    evaluator raised and the headline evaluator did not.
+    """
+
+    document = json.loads(path.read_text())
+    for case in document["report"]["cases"]:
+        if case["name"] == case_id:
+            case["evaluator_failures"] = [
+                {
+                    "name": "RelevanceScore",
+                    "error_message": "RuntimeError: evaluator down",
+                    "error_stacktrace": "Traceback ...",
+                    "source": {"name": "RelevanceScore", "arguments": None},
+                }
+            ]
+    path.write_text(json.dumps(document))
+    return path
+
+
+def test_case_evaluator_errors_are_counted_and_explained_beside_the_population(
+    tmp_path,
+):
+    current = with_case_evaluator_error(
+        pinned(run_relevance(tmp_path, CONFUSION_CASES)), "fp"
+    )
+
+    card = Scorecard.build([ReportDocument.load(current)], baseline="none")
+
+    assert card.exit_code == 1
+    assert card.to_json()["counts"]["evaluator_errors"] == 1
+    assert card.to_markdown().split("\n\n")[1:3] == [
+        (
+            "Population: label quality gold, selection scope full; "
+            "5 selected, 5 scored, 0 failed, 0 unresolved, 1 evaluator error."
+        ),
+        (
+            "Evaluator errors: an unavailable row may come from an evaluator "
+            "that raised, not from missing reference data; inspect the "
+            "report's evaluator failures."
+        ),
+    ]

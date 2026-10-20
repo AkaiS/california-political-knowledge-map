@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import shlex
 from collections import Counter, defaultdict
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from datetime import datetime
 from pathlib import Path
 from statistics import fmean
@@ -244,16 +244,26 @@ class Axis(BaseModel, frozen=True):
         headline, summary = self.headline, self.summary
         counts = summary["counts"]
         changes = self._changes()
+        errors = counts["evaluator_errors"]
         parts = [
             f"## {summary['task']}: {self._result(changes)}",
             (
                 f"Population: label quality {self._label_quality()}, "
                 f"selection scope {summary['scope']}; {counts['selected']} selected, "
                 f"{counts['scored']} scored, {counts['execution_failures']} failed, "
-                f"{counts['unresolved']} unresolved."
+                f"{counts['unresolved']} unresolved, "
+                f"{errors} evaluator error{'' if errors == 1 else 's'}."
             ),
-            f"Baseline: {self._baseline()}.",
         ]
+        if errors:
+            # A row an evaluator failed to score reads like one the Data Set
+            # has no reference data for; the reader needs to tell them apart.
+            parts.append(
+                "Evaluator errors: an unavailable row may come from an evaluator "
+                "that raised, not from missing reference data; inspect the "
+                "report's evaluator failures."
+            )
+        parts.append(f"Baseline: {self._baseline()}.")
         diagnostic: tuple[HeadlineRow, ...] = ()
         if isinstance(headline, NoHeadline):
             parts.append(f"No Headline Metrics: {headline.reason}.")
@@ -588,10 +598,19 @@ def _against_newest_comparable_run(
             and when < ran_at
         ):
             earlier.append((when, candidate))
-    comparisons = (
-        Comparison.between(document, axis, candidate, _axis(candidate, reviewer_port))
-        for _, candidate in sorted(earlier, key=lambda pair: pair[0], reverse=True)
-    )
+
+    def candidate_comparisons() -> Iterator[Comparison]:
+        for _, candidate in sorted(earlier, key=lambda pair: pair[0], reverse=True):
+            try:
+                candidate_axis = _axis(candidate, reviewer_port)
+            except ValueError:
+                # An earlier report whose headline table can't be read is not
+                # a Comparable Run; it must not cost the current report its
+                # scorecard.
+                continue
+            yield Comparison.between(document, axis, candidate, candidate_axis)
+
+    comparisons = candidate_comparisons()
     newest = next(comparisons, None)
     if newest is None:
         return Comparison(status="no_earlier_run")

@@ -403,6 +403,44 @@ def test_auto_without_an_earlier_run_says_so(tmp_path):
     }
 
 
+def with_malformed_headline_table(path):
+    """Save ``path`` again with its headline table's columns renamed."""
+
+    document = json.loads(path.read_text())
+    for analysis in document["report"]["analyses"]:
+        if analysis.get("type") == "table":
+            analysis["columns"] = ["metric", *analysis["columns"][1:-1]]
+    path.write_text(json.dumps(document))
+    return path
+
+
+def test_auto_skips_an_earlier_report_whose_headline_table_is_malformed(tmp_path):
+    comparable = on_day(tmp_path, 1, BETTER_CASES)
+    with_malformed_headline_table(on_day(tmp_path, 2))
+    current = on_day(tmp_path, 3)
+
+    comparison = automatic(current)
+
+    assert comparison["baseline"] == str(comparable.resolve())
+    assert comparison["status"] == "comparable"
+
+
+def test_an_explicit_baseline_with_a_malformed_headline_table_raises(tmp_path):
+    baseline = with_malformed_headline_table(run(tmp_path / "baseline"))
+    current = run(tmp_path / "current")
+
+    with pytest.raises(ValueError, match="headline table columns"):
+        compared(current, baseline)
+
+
+def test_a_requested_report_with_a_malformed_headline_table_raises(tmp_path):
+    on_day(tmp_path, 1)
+    current = with_malformed_headline_table(on_day(tmp_path, 2))
+
+    with pytest.raises(ValueError, match="headline table columns"):
+        automatic(current)
+
+
 def test_auto_ignores_reports_of_other_tasks_beside_the_current_one(tmp_path):
     same_task = on_day(tmp_path, 1, data_set_sha256="0" * 64)
     on_day(tmp_path, 2, task="coreference")
