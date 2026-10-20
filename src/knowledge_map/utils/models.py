@@ -201,7 +201,11 @@ def _request_usage_facts(
     upstream_cost = None
     if deployment == "openrouter":
         charged_cost = _usage_cost(raw_usage, "cost", "charged_cost")
-        if charged_cost is None and "cost" not in raw_usage and "charged_cost" not in raw_usage:
+        if (
+            charged_cost is None
+            and "cost" not in raw_usage
+            and "charged_cost" not in raw_usage
+        ):
             charged_cost = _usage_cost(response.provider_details or {}, "cost")
         cost_details = _raw_mapping(raw_usage.get("cost_details"))
         upstream_cost = _usage_cost(
@@ -265,14 +269,10 @@ def _log_openrouter_route(
         provider_order=provider_policy.get("order"),
         allow_fallbacks=provider_policy.get("allow_fallbacks"),
         charged_cost=(
-            str(usage["charged_cost"])
-            if usage["charged_cost"] is not None
-            else None
+            str(usage["charged_cost"]) if usage["charged_cost"] is not None else None
         ),
         upstream_cost=(
-            str(usage["upstream_cost"])
-            if usage["upstream_cost"] is not None
-            else None
+            str(usage["upstream_cost"]) if usage["upstream_cost"] is not None else None
         ),
     )
 
@@ -360,9 +360,7 @@ def build_retrying_client(
 
     transport_settings = transport_settings or settings.transport
     retry_config = RetryConfig(
-        retry=retry_if_exception_type(
-            (httpx.HTTPStatusError, httpx.TransportError)
-        ),
+        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TransportError)),
         wait=wait_retry_after(max_wait=transport_settings.rate_limit_wait_cap),
         stop=stop_after_attempt(transport_settings.max_attempts),
         reraise=True,
@@ -403,9 +401,7 @@ def resolve_embedding_base_url() -> str:
     ``scripts/llama-embed.sh``.
     """
 
-    base_url = os.environ.get(
-        "LLAMA_CPP_EMBEDDING_BASE_URL", "http://localhost:8081"
-    )
+    base_url = os.environ.get("LLAMA_CPP_EMBEDDING_BASE_URL", "http://localhost:8081")
     if base_url.endswith("/v1"):
         return base_url
     return f"{base_url}/v1"
@@ -436,6 +432,28 @@ def resolve_local_chat_model(default_model: str) -> str:
 
     load_dotenv()
     return os.environ.get("LLAMA_CPP_MODEL", "").strip() or default_model
+
+
+class _StrictDefaultOpenAIJsonSchemaTransformer(OpenAIJsonSchemaTransformer):
+    """Convert output schemas to strict form unless a caller opts out.
+
+    The library default only checks whether a schema is already strict. Ours
+    carry defaults and optional fields, so a bare output type would otherwise
+    be sent without ``strict`` and the provider would not enforce the schema.
+    """
+
+    def __init__(self, schema: dict[str, Any], *, strict: bool | None = None):
+        super().__init__(schema, strict=True if strict is None else strict)
+
+
+# A hosted model may decline an optional output tool and reply in prose.
+# Native JSON Schema output leaves it no such choice, whatever output type a
+# call site passes.
+_OPENROUTER_STRUCTURED_OUTPUT_PROFILE = OpenAIModelProfile(
+    json_schema_transformer=_StrictDefaultOpenAIJsonSchemaTransformer,
+    default_structured_output_mode="native",
+    supports_json_schema_output=True,
+)
 
 
 def llama_cpp_model_profile(model_name: str) -> ModelProfile | None:
@@ -477,14 +495,16 @@ _models: dict[
 ] = {}
 
 
-_RETRYABLE_OPENROUTER_STATUS_CODES = frozenset({
-    500,
-    502,
-    503,
-    504,
-    524,
-    529,
-})
+_RETRYABLE_OPENROUTER_STATUS_CODES = frozenset(
+    {
+        500,
+        502,
+        503,
+        504,
+        524,
+        529,
+    }
+)
 
 
 class OpenRouterAdmissionGate:
@@ -634,9 +654,7 @@ class OpenRouterAdmissionGate:
             if release_slot:
                 self._release_slot_locked()
             if successful and self._working_limit is not None:
-                self._working_limit = min(
-                    self._ceiling, self._working_limit + 1
-                )
+                self._working_limit = min(self._ceiling, self._working_limit + 1)
             if is_probe:
                 self._probe_in_flight = False
                 if successful and self._deadline <= now:
@@ -804,9 +822,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         rate_limit_wait_cap: float,
         retry_hooks: OpenRouterRetryHooks | None = None,
     ) -> None:
-        self._wrapped = (
-            wrapped if wrapped is not None else httpx.AsyncHTTPTransport()
-        )
+        self._wrapped = wrapped if wrapped is not None else httpx.AsyncHTTPTransport()
         self._max_attempts = max_attempts
         self._rate_limit_wait_cap = rate_limit_wait_cap
         self._retry_hooks = retry_hooks or OpenRouterRetryHooks()
@@ -856,9 +872,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
         admitted = False
         defer_application_attempts_cleanup = False
         try:
-            is_probe = await self._admission_gate.wait_until_open(
-                self._retry_hooks
-            )
+            is_probe = await self._admission_gate.wait_until_open(self._retry_hooks)
             admitted = True
             for attempt in range(self._max_attempts):
                 _CURRENT_APPLICATION_ATTEMPTS.set(attempt + 1)
@@ -905,9 +919,7 @@ class _OpenRouterRetryTransport(httpx.AsyncBaseTransport):
                 # Completed responses keep this count until
                 # ``_OpenRouterModel._process_response`` consumes it; every
                 # other outcome is cleaned up at this boundary.
-                defer_application_attempts_cleanup = (
-                    200 <= response.status_code < 300
-                )
+                defer_application_attempts_cleanup = 200 <= response.status_code < 300
                 return response
         except BaseException:
             if admitted:
@@ -1001,9 +1013,7 @@ def _build_model(
     )
     provider = OpenAIProvider(openai_client=openai_client)
     extra_body = {
-        "chat_template_kwargs": {
-            "enable_thinking": request_settings.thinking
-        }
+        "chat_template_kwargs": {"enable_thinking": request_settings.thinking}
     }
     if request_settings.top_k is not None:
         extra_body["top_k"] = request_settings.top_k
@@ -1085,9 +1095,7 @@ def _build_openrouter_model(
     return _OpenRouterModel(
         deployment.model,
         provider=provider,
-        profile=ModelProfile(json_schema_transformer=OpenAIJsonSchemaTransformer)
-        if deployment.model.removeprefix("~").startswith("google/gemma-")
-        else None,
+        profile=_OPENROUTER_STRUCTURED_OUTPUT_PROFILE,
         settings=OpenRouterModelSettings(**model_settings),  # type: ignore[arg-type]
     )
 
@@ -1135,9 +1143,7 @@ def get_chat_model(
             key = (default_model, transport)
             model = _models.get(key) if cache else None
             if model is None:
-                model = _build_openrouter_model(
-                    default_model, None, transport
-                )
+                model = _build_openrouter_model(default_model, None, transport)
                 if cache:
                     _models[key] = model
             return model

@@ -11,6 +11,9 @@ This record covers only the local Model Deployment. OpenRouter is a separate cha
 and uses its provider's structured-output behavior; the local llama.cpp enforcement described here
 does not apply to it.
 
+> **Legacy:** the paragraph above no longer describes OpenRouter structured output. Superseded by
+> [ADR 0026](0026-openrouter-chat-uses-strict-native-structured-output.md).
+
 pydantic-ai's default output mode synthesises a `final_result` tool and sends
 `tool_choice: "required"`. On llama.cpp that is binding — the tool's JSON schema
 is compiled to a GBNF grammar and decoding is constrained to it, so the tool call

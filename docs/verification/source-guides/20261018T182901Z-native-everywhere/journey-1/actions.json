@@ -1,0 +1,2351 @@
+[
+  {
+    "event": "start",
+    "process_group": 64549,
+    "command": [
+      "uv",
+      "run",
+      "--frozen",
+      "--no-sync",
+      "--project",
+      "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985",
+      "ca-map",
+      "chat",
+      "--port",
+      "8141"
+    ]
+  },
+  {
+    "method": "POST",
+    "route": "/api/questions",
+    "body": {
+      "question": "What is happening with housing policy in California?"
+    },
+    "status": 202,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "running",
+      "articles": [],
+      "groups": [],
+      "relevance_order": [],
+      "partial": false,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "running",
+        "bounded_selection": true,
+        "selection_limited": false,
+        "included_articles": 0
+      },
+      "disclosures": [],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "status": "running",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "running",
+          "bounded_selection": true,
+          "selection_limited": false,
+          "included_articles": 0
+        },
+        "disclosures": []
+      },
+      "publication_orders": {
+        "publication_asc": [],
+        "publication_desc": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "completed",
+      "assessment": {
+        "status": "allowed",
+        "reading_order": "relevance"
+      },
+      "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+      "articles": [
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "title": "New California law frees up funds for sober homeless housing",
+            "url": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "published_date": "2026-09-29T22:43:39Z"
+          },
+          "reading_direction": "Read this article to investigate recent legislation regarding state funds for sober homeless housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/#:~:text=The%20new%20California%20law%20intends%20to%20free%20up%20state%20funds%20for%20housing%20that%20requires%20residents%20to%20stay%20sober."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "title": "Here\u2019s what the \u2018once-in-a-lifetime\u2019 federal housing bill means for California",
+            "url": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "published_date": "2026-07-10T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the potential impact of a major federal housing bill on California.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "title": "A California housing bill would raise wages to $28. Why do some unions hate it?",
+            "url": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "published_date": "2026-06-04T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the debate over AB 1751 and its implications for construction wages and unions.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "title": "Should coastal commission get more power over rebuilding after wildfire? Some lawmakers say yes",
+            "url": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "published_date": "2026-07-01T12:15:00Z"
+          },
+          "reading_direction": "Read this article to investigate the role of the California Coastal Commission in housing and rebuilding efforts.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "title": "California colleges don\u2019t have enough housing for students. Will these 4 new laws help?",
+            "url": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "published_date": "2026-10-02T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate new laws aimed at increasing affordable student housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/#:~:text=Many%20California%20college%20students%20struggle%20to%20find%20affordable%20housing."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "title": "Trump renews push to shift homelessness funding. What\u2019s at stake",
+            "url": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "published_date": "2026-06-24T11:55:00Z"
+          },
+          "reading_direction": "Read this article to investigate federal shifts in homelessness funding and the debate over 'housing first' policies.",
+          "publication": "CalMatters",
+          "section_links": []
+        }
+      ],
+      "groups": [
+        {
+          "kind": "aspect",
+          "label": "Legislative and Policy Developments",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+              "reading_direction": "Read about the new law regarding state funds for sober homeless housing."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+              "reading_direction": "Read about the debate surrounding AB 1751 and construction wages."
+            },
+            {
+              "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+              "reading_direction": "Read about the package of four bills intended to assist with student housing."
+            }
+          ],
+          "order": "relevance"
+        },
+        {
+          "kind": "aspect",
+          "label": "Federal and Regulatory Influences",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+              "reading_direction": "Read about the implications of the federal housing bill for California."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+              "reading_direction": "Read about the push to shift homelessness funding at the federal level."
+            },
+            {
+              "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+              "reading_direction": "Read about the Coastal Commission's role in housing and rebuilding."
+            }
+          ],
+          "order": "relevance"
+        }
+      ],
+      "relevance_order": [
+        "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+        "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+        "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/"
+      ],
+      "partial": true,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "partial",
+        "bounded_selection": true,
+        "selection_limited": true,
+        "included_articles": 6
+      },
+      "disclosures": [
+        {
+          "kind": "partial_search",
+          "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+        }
+      ],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "finished_at": "2026-10-18T18:29:56.605852Z",
+        "status": "completed",
+        "outcome": "completed",
+        "assessment": {
+          "status": "allowed",
+          "reading_order": "relevance"
+        },
+        "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "partial",
+          "bounded_selection": true,
+          "selection_limited": true,
+          "included_articles": 6
+        },
+        "disclosures": [
+          {
+            "kind": "partial_search",
+            "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+          }
+        ]
+      },
+      "last_retrieved_at": "2026-10-18T18:29:56.605852Z",
+      "publication_orders": {
+        "publication_asc": [
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/"
+        ],
+        "publication_desc": [
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+        ]
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides",
+    "body": null,
+    "status": 200,
+    "response": {
+      "guides": [
+        {
+          "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+          "question": "What is happening with housing policy in California?",
+          "status": "completed",
+          "created_at": "2026-10-18T18:29:27.871655Z",
+          "latest_attempt": {
+            "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+            "started_at": "2026-10-18T18:29:27.871655Z",
+            "finished_at": "2026-10-18T18:29:56.605852Z",
+            "status": "completed",
+            "outcome": "completed",
+            "assessment": {
+              "status": "allowed",
+              "reading_order": "relevance"
+            }
+          },
+          "last_retrieved_at": "2026-10-18T18:29:56.605852Z"
+        }
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "completed",
+      "assessment": {
+        "status": "allowed",
+        "reading_order": "relevance"
+      },
+      "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+      "articles": [
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "title": "New California law frees up funds for sober homeless housing",
+            "url": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "published_date": "2026-09-29T22:43:39Z"
+          },
+          "reading_direction": "Read this article to investigate recent legislation regarding state funds for sober homeless housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/#:~:text=The%20new%20California%20law%20intends%20to%20free%20up%20state%20funds%20for%20housing%20that%20requires%20residents%20to%20stay%20sober."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "title": "Here\u2019s what the \u2018once-in-a-lifetime\u2019 federal housing bill means for California",
+            "url": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "published_date": "2026-07-10T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the potential impact of a major federal housing bill on California.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "title": "A California housing bill would raise wages to $28. Why do some unions hate it?",
+            "url": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "published_date": "2026-06-04T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the debate over AB 1751 and its implications for construction wages and unions.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "title": "Should coastal commission get more power over rebuilding after wildfire? Some lawmakers say yes",
+            "url": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "published_date": "2026-07-01T12:15:00Z"
+          },
+          "reading_direction": "Read this article to investigate the role of the California Coastal Commission in housing and rebuilding efforts.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "title": "California colleges don\u2019t have enough housing for students. Will these 4 new laws help?",
+            "url": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "published_date": "2026-10-02T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate new laws aimed at increasing affordable student housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/#:~:text=Many%20California%20college%20students%20struggle%20to%20find%20affordable%20housing."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "title": "Trump renews push to shift homelessness funding. What\u2019s at stake",
+            "url": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "published_date": "2026-06-24T11:55:00Z"
+          },
+          "reading_direction": "Read this article to investigate federal shifts in homelessness funding and the debate over 'housing first' policies.",
+          "publication": "CalMatters",
+          "section_links": []
+        }
+      ],
+      "groups": [
+        {
+          "kind": "aspect",
+          "label": "Legislative and Policy Developments",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+              "reading_direction": "Read about the new law regarding state funds for sober homeless housing."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+              "reading_direction": "Read about the debate surrounding AB 1751 and construction wages."
+            },
+            {
+              "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+              "reading_direction": "Read about the package of four bills intended to assist with student housing."
+            }
+          ],
+          "order": "relevance"
+        },
+        {
+          "kind": "aspect",
+          "label": "Federal and Regulatory Influences",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+              "reading_direction": "Read about the implications of the federal housing bill for California."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+              "reading_direction": "Read about the push to shift homelessness funding at the federal level."
+            },
+            {
+              "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+              "reading_direction": "Read about the Coastal Commission's role in housing and rebuilding."
+            }
+          ],
+          "order": "relevance"
+        }
+      ],
+      "relevance_order": [
+        "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+        "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+        "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/"
+      ],
+      "partial": true,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "partial",
+        "bounded_selection": true,
+        "selection_limited": true,
+        "included_articles": 6
+      },
+      "disclosures": [
+        {
+          "kind": "partial_search",
+          "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+        }
+      ],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "finished_at": "2026-10-18T18:29:56.605852Z",
+        "status": "completed",
+        "outcome": "completed",
+        "assessment": {
+          "status": "allowed",
+          "reading_order": "relevance"
+        },
+        "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "partial",
+          "bounded_selection": true,
+          "selection_limited": true,
+          "included_articles": 6
+        },
+        "disclosures": [
+          {
+            "kind": "partial_search",
+            "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+          }
+        ]
+      },
+      "last_retrieved_at": "2026-10-18T18:29:56.605852Z",
+      "publication_orders": {
+        "publication_asc": [
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/"
+        ],
+        "publication_desc": [
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+        ]
+      }
+    }
+  },
+  {
+    "event": "stop",
+    "process_group": 64549,
+    "exit_code": 0
+  },
+  {
+    "event": "start",
+    "process_group": 64653,
+    "command": [
+      "uv",
+      "run",
+      "--frozen",
+      "--no-sync",
+      "--project",
+      "/Users/akaisenghor/Projects/california-political-knowledge-map/main/.claude/worktrees/logfire-mcp-run-failures-7d2985",
+      "ca-map",
+      "chat",
+      "--port",
+      "8141"
+    ]
+  },
+  {
+    "method": "GET",
+    "route": "/api/guides/cdba3e06-329e-4e23-9019-4124baabec40",
+    "body": null,
+    "status": 200,
+    "response": {
+      "question": "What is happening with housing policy in California?",
+      "status": "completed",
+      "assessment": {
+        "status": "allowed",
+        "reading_order": "relevance"
+      },
+      "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+      "articles": [
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "title": "New California law frees up funds for sober homeless housing",
+            "url": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+            "published_date": "2026-09-29T22:43:39Z"
+          },
+          "reading_direction": "Read this article to investigate recent legislation regarding state funds for sober homeless housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/#:~:text=The%20new%20California%20law%20intends%20to%20free%20up%20state%20funds%20for%20housing%20that%20requires%20residents%20to%20stay%20sober."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "title": "Here\u2019s what the \u2018once-in-a-lifetime\u2019 federal housing bill means for California",
+            "url": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+            "published_date": "2026-07-10T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the potential impact of a major federal housing bill on California.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "title": "A California housing bill would raise wages to $28. Why do some unions hate it?",
+            "url": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+            "published_date": "2026-06-04T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate the debate over AB 1751 and its implications for construction wages and unions.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "title": "Should coastal commission get more power over rebuilding after wildfire? Some lawmakers say yes",
+            "url": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+            "published_date": "2026-07-01T12:15:00Z"
+          },
+          "reading_direction": "Read this article to investigate the role of the California Coastal Commission in housing and rebuilding efforts.",
+          "publication": "CalMatters",
+          "section_links": []
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "title": "California colleges don\u2019t have enough housing for students. Will these 4 new laws help?",
+            "url": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+            "published_date": "2026-10-02T12:00:00Z"
+          },
+          "reading_direction": "Read this article to investigate new laws aimed at increasing affordable student housing.",
+          "publication": "CalMatters",
+          "section_links": [
+            "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/#:~:text=Many%20California%20college%20students%20struggle%20to%20find%20affordable%20housing."
+          ]
+        },
+        {
+          "citation": {
+            "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "title": "Trump renews push to shift homelessness funding. What\u2019s at stake",
+            "url": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+            "published_date": "2026-06-24T11:55:00Z"
+          },
+          "reading_direction": "Read this article to investigate federal shifts in homelessness funding and the debate over 'housing first' policies.",
+          "publication": "CalMatters",
+          "section_links": []
+        }
+      ],
+      "groups": [
+        {
+          "kind": "aspect",
+          "label": "Legislative and Policy Developments",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+              "reading_direction": "Read about the new law regarding state funds for sober homeless housing."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+              "reading_direction": "Read about the debate surrounding AB 1751 and construction wages."
+            },
+            {
+              "source_article_id": "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+              "reading_direction": "Read about the package of four bills intended to assist with student housing."
+            }
+          ],
+          "order": "relevance"
+        },
+        {
+          "kind": "aspect",
+          "label": "Federal and Regulatory Influences",
+          "members": [
+            {
+              "source_article_id": "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+              "reading_direction": "Read about the implications of the federal housing bill for California."
+            },
+            {
+              "source_article_id": "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+              "reading_direction": "Read about the push to shift homelessness funding at the federal level."
+            },
+            {
+              "source_article_id": "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+              "reading_direction": "Read about the Coastal Commission's role in housing and rebuilding."
+            }
+          ],
+          "order": "relevance"
+        }
+      ],
+      "relevance_order": [
+        "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+        "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+        "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+        "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+        "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+        "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/"
+      ],
+      "partial": true,
+      "search_details": {
+        "collections": [
+          {
+            "name": "CalMatters",
+            "date_basis": "publication_date",
+            "earliest_date": "2023-06-15",
+            "latest_date": "2026-10-12"
+          }
+        ],
+        "completion": "partial",
+        "bounded_selection": true,
+        "selection_limited": true,
+        "included_articles": 6
+      },
+      "disclosures": [
+        {
+          "kind": "partial_search",
+          "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+        }
+      ],
+      "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+      "created_at": "2026-10-18T18:29:27.871655Z",
+      "latest_attempt": {
+        "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+        "started_at": "2026-10-18T18:29:27.871655Z",
+        "finished_at": "2026-10-18T18:29:56.605852Z",
+        "status": "completed",
+        "outcome": "completed",
+        "assessment": {
+          "status": "allowed",
+          "reading_order": "relevance"
+        },
+        "message": "Part of this search failed. Available reading is retained, but this search is incomplete.",
+        "search_details": {
+          "collections": [
+            {
+              "name": "CalMatters",
+              "date_basis": "publication_date",
+              "earliest_date": "2023-06-15",
+              "latest_date": "2026-10-12"
+            }
+          ],
+          "completion": "partial",
+          "bounded_selection": true,
+          "selection_limited": true,
+          "included_articles": 6
+        },
+        "disclosures": [
+          {
+            "kind": "partial_search",
+            "message": "Part of this search failed. Available reading is retained, but this search is incomplete."
+          }
+        ]
+      },
+      "last_retrieved_at": "2026-10-18T18:29:56.605852Z",
+      "publication_orders": {
+        "publication_asc": [
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/"
+        ],
+        "publication_desc": [
+          "https://calmatters.org/education/2026/10/new-laws-affordable-student-housing-california/",
+          "https://calmatters.org/housing/homelessness/2026/09/sober-housing-haney/",
+          "https://calmatters.org/housing/2026/07/road-housing-california-federal/",
+          "https://calmatters.org/politics/2026/07/coastal-commission-rebuilding-wildfire-exemptions/",
+          "https://calmatters.org/housing/homelessness/2026/06/homeless-funding-hud-change/",
+          "https://calmatters.org/housing/2026/06/ab-1751-trades-carpenters-fight/"
+        ]
+      }
+    }
+  },
+  {
+    "event": "stop",
+    "process_group": 64653,
+    "exit_code": 0
+  }
+]

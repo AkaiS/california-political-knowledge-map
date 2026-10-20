@@ -1,0 +1,49 @@
+{
+  "question": "What should I read about housing legislation in California?",
+  "status": "running",
+  "articles": [],
+  "groups": [],
+  "relevance_order": [],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ],
+    "completion": "running",
+    "bounded_selection": true,
+    "selection_limited": false,
+    "included_articles": 0
+  },
+  "disclosures": [],
+  "guide_id": "3c0c2f2c-20e9-40c7-8e35-f5f35384bb5f",
+  "created_at": "2026-10-18T08:00:02.314384Z",
+  "latest_attempt": {
+    "attempt_id": "bd6a7d59-9844-441e-ad13-9c005a67894f",
+    "started_at": "2026-10-18T08:00:02.314384Z",
+    "status": "running",
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-10-12"
+        }
+      ],
+      "completion": "running",
+      "bounded_selection": true,
+      "selection_limited": false,
+      "included_articles": 0
+    },
+    "disclosures": []
+  },
+  "publication_orders": {
+    "publication_asc": [],
+    "publication_desc": []
+  }
+}

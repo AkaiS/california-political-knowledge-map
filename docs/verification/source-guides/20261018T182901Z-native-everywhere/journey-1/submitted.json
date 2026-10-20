@@ -1,0 +1,49 @@
+{
+  "question": "What is happening with housing policy in California?",
+  "status": "running",
+  "articles": [],
+  "groups": [],
+  "relevance_order": [],
+  "partial": false,
+  "search_details": {
+    "collections": [
+      {
+        "name": "CalMatters",
+        "date_basis": "publication_date",
+        "earliest_date": "2023-06-15",
+        "latest_date": "2026-10-12"
+      }
+    ],
+    "completion": "running",
+    "bounded_selection": true,
+    "selection_limited": false,
+    "included_articles": 0
+  },
+  "disclosures": [],
+  "guide_id": "cdba3e06-329e-4e23-9019-4124baabec40",
+  "created_at": "2026-10-18T18:29:27.871655Z",
+  "latest_attempt": {
+    "attempt_id": "fabd5c79-5a15-4789-bd6e-7ad76f68aa32",
+    "started_at": "2026-10-18T18:29:27.871655Z",
+    "status": "running",
+    "search_details": {
+      "collections": [
+        {
+          "name": "CalMatters",
+          "date_basis": "publication_date",
+          "earliest_date": "2023-06-15",
+          "latest_date": "2026-10-12"
+        }
+      ],
+      "completion": "running",
+      "bounded_selection": true,
+      "selection_limited": false,
+      "included_articles": 0
+    },
+    "disclosures": []
+  },
+  "publication_orders": {
+    "publication_asc": [],
+    "publication_desc": []
+  }
+}

@@ -6,7 +6,7 @@ import httpx
 import pytest
 from opentelemetry.exporter.otlp.proto.common.trace_encoder import encode_spans
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
-from pydantic_ai.messages import ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from starlette.testclient import TestClient
 from test_chat_evidence_trail import application_attributes, complete_chat
@@ -37,6 +37,8 @@ def answer_chat(guidance, **retrieval_options):
             output = {"status": "allowed"}
         elif isinstance(guidance, Exception):
             raise guidance
+        elif isinstance(guidance, ModelResponse):
+            return guidance
         else:
             output = guidance
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, output)])
@@ -128,6 +130,41 @@ def test_guidance_failure_records_a_safe_kind_without_preparing_an_answer(
     assert "private" not in json.dumps(attributes)
     assert completed["status"] == "guidance_failed"
     assert not any(s["name"] == "chat_session.answer_prepared" for s in spans)
+
+
+@pytest.mark.parametrize(
+    "response,expected_part,error_mentions",
+    [
+        (
+            ModelResponse(parts=[TextPart("Here are some articles to read.")]),
+            {"part_kind": "text", "content": "Here are some articles to read."},
+            "Invalid JSON",
+        ),
+        (
+            ModelResponse(
+                parts=[ToolCallPart("final_result", {"source_notes": [{"note": ""}]})]
+            ),
+            {
+                "part_kind": "tool-call",
+                "tool_name": "final_result",
+                "args": {"source_notes": [{"note": ""}]},
+            },
+            "source_article_id",
+        ),
+    ],
+)
+def test_rejected_guidance_output_records_what_the_model_returned(
+    chat_capture, response, expected_part, error_mentions
+):
+    completed = complete_chat(answer_chat(response))
+    spans = chat_capture.exported_spans_as_dict(parse_json_attributes=True)
+    guidance = next(s for s in spans if s["name"] == "chat_session.guidance")
+    attributes = application_attributes(guidance)
+    assert attributes["failure_kind"] == "model_output"
+    [part] = attributes["model_response"]["parts"]
+    assert expected_part.items() <= part.items()
+    assert error_mentions in attributes["output_error"]
+    assert completed["status"] == "guidance_failed"
 
 
 @pytest.mark.parametrize("assembly_fails", [False, True])

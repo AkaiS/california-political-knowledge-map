@@ -1,0 +1,16 @@
+[
+  "actions.json",
+  "baseline.json",
+  "cleanup.json",
+  "doctor.json",
+  "manifest.json",
+  "persisted.json",
+  "pipeline.log",
+  "reopened.json",
+  "root.html",
+  "saved-list.json",
+  "server.log",
+  "sqlite-proof.json",
+  "submitted.json",
+  "terminal.json"
+]
