@@ -6,8 +6,6 @@ checkpoint while preserving each task's evidence collection hooks.
 
 from __future__ import annotations
 
-import asyncio
-import inspect
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
@@ -102,12 +100,15 @@ def run_data_set(
         report_evaluators=report_evaluators,
         split=split,
     )
-    synchronous_task = _synchronous(task)
     lifecycle = case_lifecycle or EvaluationCaseLifecycle
     if checkpoint is not None:
         lifecycle = checkpoint.lifecycle(lifecycle)
+    # An async task runs on the one loop ``evaluate_sync`` owns. A memoized
+    # model's HTTP client keeps keep-alive connections bound to the loop that
+    # opened them, so a fresh loop per case would hand the next case a
+    # connection on a closed loop.
     return dataset.evaluate_sync(
-        synchronous_task,
+        task,
         name=data_set.task,
         task_name=data_set.task,
         metadata=dict(experiment_metadata) if experiment_metadata else None,
@@ -126,12 +127,3 @@ def _framework_case(case: EvaluationCase[Any, Any, Any]) -> Case[Any, Any, Any]:
         metadata=case.metadata,
     )
 
-
-def _synchronous(task: Callable[[Any], Any]) -> Callable[[Any], Any]:
-    if not inspect.iscoroutinefunction(task):
-        return task
-
-    def run(task_input: Any) -> Any:
-        return asyncio.run(task(task_input))
-
-    return run
