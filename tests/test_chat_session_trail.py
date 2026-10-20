@@ -205,7 +205,11 @@ def test_start_records_resolved_settings_and_already_measured_coverage(
         "structural_candidate_limit": 50,
         "fused_candidate_limit": 100,
     }
-    assert start["evidence_limits"] == {"character_limit": 24000, "max_passages": 12}
+    assert start["evidence_limits"] == {
+        "character_limit": 24000,
+        "max_passages": 12,
+        "max_passages_per_article": 3,
+    }
     from knowledge_map.jev.prompts import JEV_PROMPTS
 
     assert set(start["prompt_hashes"]) == {"chat_agent", "question_policy"} | set(

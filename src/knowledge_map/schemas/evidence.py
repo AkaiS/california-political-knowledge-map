@@ -10,3 +10,4 @@ from knowledge_map.schemas.retrieval import RetrievalValue
 class EvidenceContextLimits(RetrievalValue):
     character_limit: Annotated[int, Field(strict=True, ge=1)] = 24000
     max_passages: Annotated[int, Field(strict=True, ge=1)] = 12
+    max_passages_per_article: Annotated[int, Field(strict=True, ge=1)] = 3

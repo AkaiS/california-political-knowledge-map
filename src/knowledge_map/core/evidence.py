@@ -222,6 +222,12 @@ class EvidenceAssembler:
                     for remaining in ordered[index:]
                 )
                 break
+            previous = sources.get(candidate.source_article_id)
+            if previous and len(previous.passages) >= limits.max_passages_per_article:
+                omitted.append(
+                    {"chunk_id": candidate.chunk_id, "reason": "article_passage_limit"}
+                )
+                continue
             grounding = await self._load_grounding(candidate)
             if (
                 grounding.chunk_id != candidate.chunk_id
@@ -234,7 +240,6 @@ class EvidenceAssembler:
                 provenance="stored_chunk",
                 candidate=candidate,
             )
-            previous = sources.get(candidate.source_article_id)
             if previous and previous.citation != grounding.citation:
                 raise ValueError("one Source Article has conflicting citations")
             proposed = dict(sources)
