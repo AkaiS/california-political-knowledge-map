@@ -84,48 +84,6 @@ def test_replaced_benchmark_and_stale_reference_rejected(tmp_path):
         runner.resolve_plan("rag", root=tmp_path)
 
 
-def _document():
-    return {
-        "task": "retrieval",
-        "label_quality": "silver",
-        "experiment_metadata": {"selection": {"scope": "full", "seed": None}},
-        "evaluation_run": {
-            "status": "incomplete",
-            "selected_case_ids": [
-                "answer",
-                "guidance_failure",
-                "framework_failure",
-                "pending",
-            ],
-            "started_case_ids": ["answer", "guidance_failure", "framework_failure"],
-            "selected_cases": [],
-        },
-        "report": {
-            "cases": [
-                {
-                    "name": "answer",
-                    "output": {
-                        "answer": {"introduction": None, "source_notes": []},
-                        "rendered_text": "Answer",
-                        "result": {
-                            "execution": {
-                                "outcomes": [{"branch": "dense", "status": "succeeded"}]
-                            }
-                        },
-                    },
-                    "scores": {"fused_recall_at_10": {"value": 0.8}},
-                },
-                {
-                    "name": "guidance_failure",
-                    "output": {"failure": {"stage": "retrieval_and_guidance"}},
-                    "scores": {"fused_recall_at_10": {"value": 0.0}},
-                },
-            ],
-            "failures": [{"name": "framework_failure", "error_message": "exhausted"}],
-        },
-    }
-
-
 def _saved(tmp_path, document):
     path = tmp_path / document["task"] / "run.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -133,125 +91,39 @@ def _saved(tmp_path, document):
     return path
 
 
-def test_summary_retains_failures_and_unresolved_denominators(tmp_path):
-    summary = runner.summarize_report(_saved(tmp_path, _document()))
-    assert summary["counts"] == {
-        "selected": 4,
-        "attempted": 3,
-        "terminal": 3,
-        "completed_answers": 1,
-        "declined": 0,
-        "execution_failures": 2,
-        "unresolved": 1,
-        "evaluator_errors": 0,
-    }
-    assert summary["unresolved_case_ids"] == ["pending"]
-    assert summary["failures_by_stage"] == {"framework": 1, "retrieval_and_guidance": 1}
-    assert summary["metrics"]["fused_recall_at_10"]["mean"] == 0.4
-    assert summary["metrics"]["fused_recall_at_10"]["scored_cases"] == 2
-    assert summary["metrics"]["fused_recall_at_10"]["missing_cases"] == 2
-    assert summary["branch_completion"]["dense"]["unrecorded"] == 3
-    assert summary["metrics"]["fused_ndcg_at_10"]["unavailable_reason"]
-    assert summary["reviewer_url"] == "http://127.0.0.1:8766/runs/retrieval--run"
+def test_report_prints_the_scorecard_and_exits_with_its_exit_code(tmp_path, capsys):
+    from knowledge_map.evaluation.run_report import ReportDocument, Scorecard
 
-
-def test_report_cli_counts_direct_and_historical_declines_without_rewriting_report(
-    tmp_path, capsys
-):
-    document = {
-        "task": "chat",
-        "label_quality": "unlabeled",
-        "report": {
-            "cases": [
-                {
-                    "name": "historical-decline",
-                    "output": {
-                        "preparation": {
-                            "status": "declined",
-                            "message": "Forecasts are outside the question policy.",
-                        }
-                    },
-                },
-                {
-                    "name": "direct-decline",
-                    "output": {
-                        "approval_mode": "direct_question",
-                        "preparation": None,
-                        "assessment": {
-                            "status": "declined",
-                            "explanation": "Forecasts are outside the question policy.",
-                        },
-                    },
-                },
-                {
-                    "name": "needs-edit",
-                    "output": {
-                        "assessment": {
-                            "status": "needs_edit",
-                            "explanation": "Name the bill in the complete question.",
-                        }
-                    },
-                },
-                {
-                    "name": "deferred-with-guidance",
-                    "output": {
-                        "assessment": {
-                            "status": "deferred",
-                            "explanation": "The collection has a limited date range.",
-                            "recoverable_portion": "Reporting inside that range.",
-                        },
-                        "answer": {"introduction": None, "source_notes": []},
-                        "rendered_text": "Read the available reporting.",
-                    },
-                },
-            ]
-        },
-    }
-    path = _saved(tmp_path, document)
-    original = path.read_bytes()
-
-    assert runner.main(["--report", str(path)]) == 0
-    summary = json.loads(capsys.readouterr().out)
-
-    assert summary["counts"]["selected"] == summary["counts"]["terminal"] == 4
-    assert summary["counts"]["declined"] == 2
-    assert summary["counts"]["completed_answers"] == 1
-    assert summary["counts"]["execution_failures"] == 0
-    assert summary["counts"]["unresolved"] == 0
-    assert path.read_bytes() == original
-
-
-def test_summary_detects_duplicate_unexpected_and_mismatched_ids(tmp_path):
-    document = _document()
-    document["report"]["cases"].append(document["report"]["cases"][0])
-    document["report"]["failures"].append({"name": "surprise"})
-    summary = runner.summarize_report(
-        _saved(tmp_path, document), expected_ids=["answer"]
-    )
-    assert summary["status"] == "incomplete"
-    assert summary["integrity"]["duplicate_case_ids"] == ["answer"]
-    assert summary["integrity"]["selection_manifest_mismatch"]
-    assert "surprise" in summary["integrity"]["unexpected_case_ids"]
-
-
-def test_unlabeled_and_historical_reports_are_explicit(tmp_path):
     document = {
         "task": "chat",
         "label_quality": "unlabeled",
         "report": {
             "cases": [
                 {"name": "decline", "output": {"preparation": {"status": "declined"}}}
-            ]
+            ],
+            "failures": [{"name": "framework", "error_message": "exhausted"}],
         },
     }
-    summary = runner.summarize_report(_saved(tmp_path, document))
-    assert summary["scope"] == "unknown"
-    assert summary["status"] == "historical_selection_unknown"
-    assert summary["counts"]["declined"] == 1
-    assert (
-        summary["metrics_unavailable_reason"]
-        == "This Data Set has no reference judgments."
+    path = _saved(tmp_path, document)
+    other = _saved(tmp_path, {"task": "relevance", "report": {"cases": []}})
+    expected = Scorecard.build([ReportDocument.load(path)], baseline="auto")
+    both = Scorecard.build(
+        [ReportDocument.load(path), ReportDocument.load(other)], baseline="auto"
     )
+
+    code = runner.main(["--report", str(path)])
+
+    assert json.loads(capsys.readouterr().out) == json.loads(
+        json.dumps(expected.to_json())
+    )
+    assert code == expected.exit_code == 1
+
+    code = runner.main(
+        ["--format", "markdown", "--report", str(path), "--report", str(other)]
+    )
+
+    assert capsys.readouterr().out == both.to_markdown()
+    assert code == both.exit_code == 1
 
 
 def test_execute_uses_engine_cli_and_reports_saved_failure(tmp_path, monkeypatch):
@@ -272,7 +144,8 @@ def test_execute_uses_engine_cli_and_reports_saved_failure(tmp_path, monkeypatch
         raise SystemExit("saved framework failure")
 
     monkeypatch.setattr(runner.evaluate, "_run", run)
-    summary, code = runner.execute_plan(plan)
+    scorecard, code = runner.execute_plan(plan)
+    summary = scorecard.to_json()
     assert code == 1
     assert summary["counts"]["terminal"] == 1
     assert summary["counts"]["execution_failures"] == 1
@@ -290,85 +163,6 @@ def test_plan_mode_never_executes_models(monkeypatch, capsys):
         ]
         == 25
     )
-
-
-@pytest.mark.parametrize("output", [True, False, "relevant", 3, ["topic"]])
-def test_component_scalar_output_is_reviewably_summarized(tmp_path, output):
-    document = {
-        "task": "relevance",
-        "report": {
-            "cases": [
-                {
-                    "name": "component",
-                    "output": output,
-                    "scores": {"correct": {"value": 1.0}},
-                }
-            ]
-        },
-    }
-    summary = runner.summarize_report(_saved(tmp_path, document))
-    assert summary["counts"]["terminal"] == 1
-    assert summary["metrics"]["correct"]["mean"] == 1.0
-    assert summary["branch_completion"] == {}
-
-
-def test_historical_chat_answers_and_branches_use_real_schema():
-    path = (
-        ROOT
-        / "evals/reports/chat/20261007T201147Z-35d1475-local-gemma4-26b-1499ceec2201.json"
-    )
-    summary = runner.summarize_report(path)
-    assert summary["counts"]["completed_answers"] == 2
-    assert summary["branch_completion"]["dense"]["succeeded"] == 2
-    assert summary["branch_completion"]["dense"]["unrecorded"] == 0
-    assert summary["provenance"]["experiment_metadata"]["prompts"]
-
-
-def test_historical_rag_metrics_match_reviewer_projection():
-    path = (
-        ROOT
-        / "evals/reports/retrieval/20261002T233848Z-e237389-local-gemma4-26b-1499ceec2201.json"
-    )
-    document = json.loads(path.read_text())
-    from knowledge_map.evaluation.rag_review import project_report
-
-    projection = project_report(document)
-    summary = runner.summarize_report(path)
-    for metric in ("precision", "two_hop_recall", "recall"):
-        row = next(
-            row
-            for row in projection["metrics"]
-            if row["branch"] == "fused" and row["metric"] == metric and row["k"] == 10
-        )
-        reported = summary["metrics"][f"fused_{metric}_at_10"]
-        assert reported["mean"] == row["value"]
-        assert reported["scored_cases"] == row["scored_cases"]
-        assert reported["applicable_cases"] == row["applicable_cases"]
-
-
-def test_component_caught_failures_and_boolean_evaluators_are_retained(tmp_path):
-    document = {
-        "task": "coreference",
-        "report": {
-            "cases": [
-                {
-                    "name": "failed",
-                    "output": {"failure_type": "task_exhaustion"},
-                    "assertions": {"Completed": {"value": False}},
-                },
-                {
-                    "name": "success",
-                    "output": {},
-                    "assertions": {"Completed": {"value": True}},
-                },
-            ]
-        },
-    }
-    summary = runner.summarize_report(_saved(tmp_path, document))
-    assert summary["counts"]["execution_failures"] == 1
-    assert summary["failures_by_stage"] == {"task:task_exhaustion": 1}
-    assert summary["assertions"]["Completed"]["pass_rate"] == 0.5
-    assert summary["assertions"]["Completed"]["failed"] == 1
 
 
 def test_plan_drift_is_rejected_before_execution(monkeypatch):
@@ -392,7 +186,7 @@ def test_script_cli_checkpoint_integration_without_model_calls(tmp_path, monkeyp
     fake = replace(
         task,
         build=lambda deployment, dataset: (
-            lambda case_input: {"classification": "RELEVANT"}
+            lambda case_input: task.output_type(classification="RELEVANT")
         ),
         evaluators=(),
         prompts=lambda: {"test": "fixed"},
@@ -424,7 +218,8 @@ def test_script_cli_checkpoint_integration_without_model_calls(tmp_path, monkeyp
         )
     )
     plan = runner.resolve_plan("relevance")
-    summary, code = runner.execute_plan(plan)
+    scorecard, code = runner.execute_plan(plan)
+    summary = scorecard.to_json()
     assert code == 0
     assert summary["status"] == "completed"
     assert summary["scope"] == "full"
@@ -432,30 +227,12 @@ def test_script_cli_checkpoint_integration_without_model_calls(tmp_path, monkeyp
     saved = json.loads(Path(summary["report_path"]).read_text())
     assert saved["experiment_metadata"]["selection"] == plan["selection"]
     assert saved["data_set_sha256"] == plan["data_set_sha256"]
+    assert saved["experiment_metadata"]["headline_version"] == "relevance-v1"
+    assert summary["headline"]["rows"][0]["metric"] == "relevant_f1"
 
 
-def test_reviewer_command_routes_exact_root_and_custom_port(tmp_path):
-    import shlex
-
-    path = _saved(tmp_path, _document())
-    summary = runner.summarize_report(path, reviewer_port=8777)
-    assert summary["reviewer_url"] == "http://127.0.0.1:8777/runs/retrieval--run"
-    argv = shlex.split(summary["reviewer_command"])
-    assert argv[argv.index("--reports-dir") + 1] == str(tmp_path.resolve())
-    assert argv[argv.index("--port") + 1] == "8777"
-    assert "unverified" in summary["reviewer_status"]
+def test_plan_records_a_custom_reviewer_port():
     assert (
         runner.resolve_plan("rag", root=ROOT, reviewer_port=8777)["reviewer_port"]
         == 8777
     )
-    with pytest.raises(ValueError, match="Reviewer port"):
-        runner.summarize_report(path, reviewer_port=0)
-
-
-def test_standalone_report_has_no_misleading_reviewer_link(tmp_path):
-    path = tmp_path / "standalone.json"
-    path.write_text(json.dumps(_document()))
-    summary = runner.summarize_report(path)
-    assert summary["reviewer_url"] is None
-    assert summary["reviewer_command"] is None
-    assert "TASK/*.json" in summary["reviewer_status"]

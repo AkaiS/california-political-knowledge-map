@@ -20,6 +20,7 @@ from knowledge_map.evaluation import (
 )
 from knowledge_map.evaluation.persistence import ReportCheckpoint
 from knowledge_map.evaluation.report_file import atomic_write_document
+from knowledge_map.evaluation.tasks.relevance import RELEVANCE_HEADLINE
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
 
 
@@ -220,6 +221,7 @@ def test_cli_interruption_retains_prior_results_and_unresolved_population(
     task = SimpleNamespace(
         name="test",
         label_quality=LabelQuality.GOLD,
+        headline=RELEVANCE_HEADLINE,
         input_type=int,
         output_type=int,
         metadata_type=dict,

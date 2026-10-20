@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from statistics import fmean
 from typing import Any, Literal
@@ -21,6 +22,7 @@ from pydantic_ai.capabilities.hooks import Hooks
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_core import to_jsonable_python
 from pydantic_evals.evaluators import EvaluatorContext
+from pydantic_evals.reporting import ReportCase, ReportCaseFailure
 
 from knowledge_map.chat_presentation import (
     ChatSessionOutcome,
@@ -51,6 +53,16 @@ from knowledge_map.utils.telemetry import project_url
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
+from ..headline import (
+    COMPLETED_ANSWER_RATE,
+    DECLINED_RATE,
+    Aggregation,
+    HeadlineDefinition,
+    Quantile,
+    Rate,
+    Role,
+    Unavailable,
+)
 from .registry import EvaluationTask, register
 
 
@@ -339,6 +351,72 @@ class ChatCaseLifecycle(EvaluationCaseLifecycle):
         return ctx
 
 
+def completed_answer(case: ReportCase | ReportCaseFailure) -> bool:
+    """A rendered Source Guide built on a guidance answer, whatever its introduction.
+
+    Failed Evidence Assembly is not an answer.  An answer whose introduction is
+    null still guided the reader to sources.
+    """
+
+    return (
+        isinstance(case, ReportCase)
+        and bool(case.output.rendered_text)
+        and isinstance(case.output.answer, RetrievalAnswer)
+    )
+
+
+def _question_status(
+    status: Literal["declined", "deferred", "needs_edit"],
+) -> Callable[[ReportCase | ReportCaseFailure], bool]:
+    """Whether the question's recorded assessment, or else its preparation, says ``status``.
+
+    A historical approval run records only its question preparation.
+    """
+
+    def has_status(case: ReportCase | ReportCaseFailure) -> bool:
+        if not isinstance(case, ReportCase):
+            return False
+        decision = case.output.assessment or case.output.preparation
+        return decision is not None and decision.status == status
+
+    return has_status
+
+
+def _task_duration(case: ReportCase) -> float:
+    return case.task_duration
+
+
+CHAT_HEADLINE = HeadlineDefinition(
+    version="chat-v1",
+    measures=(
+        Unavailable(
+            metric="answer_quality",
+            aggregation=Aggregation.RATE,
+            role=Role.PRIMARY,
+            reason="Unlabeled Set: no quality metric",
+        ),
+        Rate.operational(COMPLETED_ANSWER_RATE, completed_answer, Role.HEADLINE),
+        Rate.operational(DECLINED_RATE, _question_status("declined"), Role.HEADLINE),
+        Rate.operational("deferred_rate", _question_status("deferred"), Role.HEADLINE),
+        Rate.operational(
+            "needs_edit_rate", _question_status("needs_edit"), Role.HEADLINE
+        ),
+        Quantile(
+            metric="task_duration_p50",
+            q=0.5,
+            of=_task_duration,
+            role=Role.HEADLINE,
+        ),
+        Quantile(
+            metric="task_duration_p95",
+            q=0.95,
+            of=_task_duration,
+            role=Role.HEADLINE,
+        ),
+    ),
+)
+
+
 CHAT_TASK = register(
     EvaluationTask(
         name="chat",
@@ -350,6 +428,7 @@ CHAT_TASK = register(
         evaluators=(),
         default_model=default_model(),
         case_lifecycle=ChatCaseLifecycle,
+        headline=CHAT_HEADLINE,
         prompts=lambda: {
             "chat_agent": CHAT_INSTRUCTIONS,
             "question_policy": QUESTION_POLICY,

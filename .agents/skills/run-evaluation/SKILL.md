@@ -26,7 +26,14 @@ owns Data Set validation, selection, persistence, and the summary.
    the saved incomplete attempt. Use the summary's counts, unavailable-metric
    reasons, provenance, artifact path, and exact reviewer link in your response.
    A nonzero exit still carries reviewable results. For an existing attempt,
-   use `uv run scripts/run_evaluation.py --report PATH`.
+   use `uv run scripts/run_evaluation.py --report PATH`; repeat `--report` for
+   one scorecard axis per attempt. JSON is the default output; `--format
+   markdown` prints the scorecard for a person, and you quote it as printed.
+   `--baseline` defaults to `auto`, the newest earlier Comparable Run saved beside the report; pass a
+   report PATH to compare against that report, or `none` for no comparison.
+   The reviewer fields below are in the JSON only. An executed run prints its
+   summary under `evaluation_summary`, and several `--report` arguments put
+   each axis's summary in `axes`.
 5. Before presenting the reviewer link as live, verify the listening process
    serves the summary's absolute `reviewer_reports_dir`. An existing server may
    serve another checkout. Use `reviewer_command` to start the matching server;

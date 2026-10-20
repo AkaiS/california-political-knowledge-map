@@ -32,8 +32,14 @@ from knowledge_map.schemas.retrieval import (
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
 from ..engine import EvaluationCaseLifecycle
+from ..headline import COMPLETED_ANSWER_RATE, CaseMean, HeadlineDefinition, Rate, Role
 from ..retrieval_report import METRIC_VERSION
-from .chat import ChatFailure, capture_messages, chat_stage_observations
+from .chat import (
+    ChatFailure,
+    capture_messages,
+    chat_stage_observations,
+    completed_answer,
+)
 from .registry import EvaluationTask, register
 
 type Ids = Annotated[tuple[NonemptyText, ...], Field(min_length=1)]
@@ -313,6 +319,26 @@ class RetrievedReferenceEvidence(Evaluator):
         return scores
 
 
+# A retrieval headline means what the case scores it averages mean, so each
+# retrieval metric version names its own headline version.  A new metric
+# version fails here until a headline version is added for it.
+HEADLINE_VERSIONS = {"unique-chunk-budget-v2": "retrieval-v1"}
+
+# Each question is one information need, so every quality row is a
+# per-question mean.
+RETRIEVAL_HEADLINE = HeadlineDefinition(
+    version=HEADLINE_VERSIONS[METRIC_VERSION],
+    measures=(
+        CaseMean(score="fused_recall_at_10", role=Role.PRIMARY),
+        Rate.operational(COMPLETED_ANSWER_RATE, completed_answer, Role.HEADLINE),
+        CaseMean(score="fused_recall_at_5", role=Role.HEADLINE),
+        CaseMean(score="fused_reciprocal_rank", role=Role.HEADLINE),
+        CaseMean(score="fused_complete_evidence_at_10", role=Role.HEADLINE),
+        CaseMean(score="context_recall", role=Role.HEADLINE),
+        CaseMean(score="context_complete_evidence", role=Role.HEADLINE),
+    ),
+)
+
 RETRIEVAL_TASK = register(
     EvaluationTask(
         name="retrieval",
@@ -325,5 +351,6 @@ RETRIEVAL_TASK = register(
         case_lifecycle=RetrievalCaseLifecycle,
         default_model=default_model(),
         prompts=lambda: {**JEV_PROMPTS, "chat_agent": CHAT_INSTRUCTIONS},
+        headline=RETRIEVAL_HEADLINE,
     )
 )

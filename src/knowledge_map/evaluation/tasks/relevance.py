@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, Literal, NamedTuple
 
 from pydantic import BaseModel
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.reporting import ReportCase
 
 from knowledge_map.adapters.sqlite_db import DEFAULT_DB_PATH
 from knowledge_map.core.relevance_agent import (
@@ -29,6 +30,14 @@ from knowledge_map.utils.models import get_chat_model
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
+from ..headline import (
+    Counts,
+    HeadlineDefinition,
+    Rate,
+    Role,
+    SetAgreement,
+    detection_counts,
+)
 from ..scoring import UNSCORED
 from .registry import EvaluationTask, register
 
@@ -118,6 +127,59 @@ class RecalledARelevantArticle(Evaluator):
         return ctx.output.classification == "RELEVANT"
 
 
+def _relevant(classification: RelevanceExpectation) -> set[str]:
+    """One article as a single-label set: RELEVANT, or nothing."""
+
+    return {"RELEVANT"} & {classification.classification}
+
+
+def _relevant_counts(case: ReportCase) -> Counts:
+    return detection_counts(_relevant(case.expected_output), _relevant(case.output))
+
+
+def _cell(expected: str, found: str) -> Callable[[ReportCase], bool]:
+    """One confusion-matrix cell: the author's label and the filter's."""
+
+    def test(case: ReportCase) -> bool:
+        return (
+            case.expected_output.classification == expected
+            and case.output.classification == found
+        )
+
+    return test
+
+
+RELEVANCE_HEADLINE = HeadlineDefinition(
+    version="relevance-v1",
+    measures=(
+        # F1 leads; recall stays beside it because a dropped relevant article
+        # never reaches the graph.
+        SetAgreement(
+            prefix="relevant",
+            counts=_relevant_counts,
+            roles={
+                "f1": Role.PRIMARY,
+                "precision": Role.HEADLINE,
+                "recall": Role.HEADLINE,
+            },
+        ),
+        Rate.quality(
+            "accuracy",
+            lambda case: (
+                case.output.classification == case.expected_output.classification
+            ),
+            Role.HEADLINE,
+        ),
+        Rate.quality("true_positives", _cell("RELEVANT", "RELEVANT"), Role.HEADLINE),
+        Rate.quality("false_positives", _cell("IRRELEVANT", "RELEVANT"), Role.HEADLINE),
+        Rate.quality("false_negatives", _cell("RELEVANT", "IRRELEVANT"), Role.HEADLINE),
+        Rate.quality(
+            "true_negatives", _cell("IRRELEVANT", "IRRELEVANT"), Role.HEADLINE
+        ),
+    ),
+)
+
+
 class CollectedCandidates(NamedTuple):
     """What `collect_candidates` found, and what it could not use."""
 
@@ -200,5 +262,6 @@ RELEVANCE_TASK = register(
         # already names by path and commit.
         prompts=lambda: {"relevance": RELEVANCE_AGENT_INSTRUCTIONS},
         collect=collect_candidates,
+        headline=RELEVANCE_HEADLINE,
     )
 )

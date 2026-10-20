@@ -11,7 +11,11 @@ uv run scripts/run_evaluation.py rag
 
 An explicitly requested mini set uses `--sample 5 --seed 42`; one named case uses
 `--case C-M1-01`. Summarize an existing attempt with
-`uv run scripts/run_evaluation.py --report PATH`. New runs save an initial
+`uv run scripts/run_evaluation.py --report PATH`; repeat `--report` for one
+scorecard axis per attempt. The summary is JSON unless you pass
+`--format markdown`. Each axis is compared against the newest earlier
+Comparable Run saved beside it unless `--baseline PATH` names a report or `--baseline none`
+skips the comparison. New runs save an initial
 population manifest and atomic progress snapshots to one report path. Failed and
 interrupted attempts remain inspectable, with unresolved cases and nonzero exit
 status distinguished from completed answers. See
@@ -214,6 +218,13 @@ enter a model request.
 
 ## Read the metrics
 
+A completed run's result is its `retrieval-v1` Headline Metrics table. Its
+primary metric is fused Recall@10, averaged per question. The headline rows
+are the completed-answer rate, fused Recall@5, fused reciprocal rank, fused
+complete evidence@10, final-context recall and final-context complete
+evidence, plus the execution failure rate. Failed cases stay out of the
+quality rows. The case scores below serve error analysis.
+
 For full-text, dense, structural when requested, and fusion, the task reports
 Recall@1, @5, @10 and @50. Recall is the fraction of unique reference identities
 found in the first k unique Article Chunks. Rank follows the recorded branch
@@ -315,10 +326,8 @@ not directly comparable. Migration provenance records the prior definition,
 source hash and backup location. Changed old values remain clearly labeled
 under `legacy_identity_budget_scores`, outside current scores. Final-context
 recall and branch completion did not change. This migration does not claim a
-new model or retrieval run.
-
-For older retrieval reports, run `uv run python scripts/compact_retrieval_reports.py`.
-It preserves originals before rewriting and leaves already compact reports alone.
+new model or retrieval run. The one-off migration script was removed once it
+had been applied (inbox ED-08); new runs are compacted when written.
 
 ## Reference freshness and annotation
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter
-from collections.abc import Mapping
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
@@ -26,6 +25,7 @@ from knowledge_map.evaluation import (
     trace_url,
     write_report,
 )
+from knowledge_map.evaluation.headline import is_failed_outcome
 from knowledge_map.evaluation.persistence import ReportCheckpoint
 from knowledge_map.evaluation.tasks import task_named, task_names
 from knowledge_map.schemas import DeploymentKind, ModelDeployment
@@ -235,6 +235,7 @@ def _run(args: argparse.Namespace) -> Path | None:
         "deployment": deployment.model_dump(mode="json"),
         "commit": run_commit(),
         "prompts": task.prompt_digests(),
+        "headline_version": task.headline.version,
         "data_set": str(path),
         "label_quality": task.label_quality.value,
         "split": split.value if split else None,
@@ -272,6 +273,7 @@ def _run(args: argparse.Namespace) -> Path | None:
                 data_set,
                 task=task.build(deployment, data_set),
                 evaluators=task.evaluators,
+                report_evaluators=(task.headline.evaluator(),),
                 case_lifecycle=getattr(task, "case_lifecycle", None),
                 split=split,
                 max_concurrency=args.max_concurrency,
@@ -307,20 +309,9 @@ def _run(args: argparse.Namespace) -> Path | None:
         print(f"\nTrace: {trace}")
 
     has_execution_errors = (
-        bool(report.failures or report.report_evaluator_failures)
+        bool(report.report_evaluator_failures)
         or any(case.evaluator_failures for case in report.cases)
-        or any(
-            any(
-                (
-                    case.output.get(field)
-                    if isinstance(case.output, Mapping)
-                    else getattr(case.output, field, None)
-                )
-                is not None
-                for field in ("failure", "failure_type")
-            )
-            for case in report.cases
-        )
+        or any(is_failed_outcome(case) for case in [*report.cases, *report.failures])
     )
     if has_execution_errors:
         raise SystemExit(

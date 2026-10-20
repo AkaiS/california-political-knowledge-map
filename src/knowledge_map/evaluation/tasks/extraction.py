@@ -18,6 +18,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.reporting import ReportCase
 
 from knowledge_map.adapters.extraction import (
     ExtractionError,
@@ -41,6 +42,14 @@ from knowledge_map.schemas import (
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
+from ..headline import (
+    CaseMean,
+    Counts,
+    HeadlineDefinition,
+    Role,
+    SetAgreement,
+    detection_counts,
+)
 from ..scoring import UNSCORED, detection_scores
 from .registry import EvaluationTask, register
 
@@ -208,6 +217,16 @@ def relationship_identity(relationship: Relationship) -> RelationshipIdentity:
     )
 
 
+def _nodes(answer: ExtractionExpectation | ExtractionOutput) -> set[NodeIdentity]:
+    return {node_identity(node) for node in answer.nodes}
+
+
+def _relationships(
+    answer: ExtractionExpectation | ExtractionOutput,
+) -> set[RelationshipIdentity]:
+    return {relationship_identity(item) for item in answer.relationships}
+
+
 def _by_identity(items: Sequence[Any], identity: Any) -> dict[Any, Any]:
     """Index items by identity, last one winning, as persistence merges them."""
 
@@ -224,8 +243,8 @@ class FoundTheSilverNodes(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = {node_identity(node) for node in ctx.expected_output.nodes}
-        found = {node_identity(node) for node in ctx.output.nodes}
+        expected = _nodes(ctx.expected_output)
+        found = _nodes(ctx.output)
         if not expected and not found:
             return {"node_precision": 1.0, "node_recall": 1.0, "node_f1": 1.0}
         return detection_scores(expected, found, "node")
@@ -278,10 +297,8 @@ class FoundTheSilverRelationships(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = {
-            relationship_identity(item) for item in ctx.expected_output.relationships
-        }
-        found = {relationship_identity(item) for item in ctx.output.relationships}
+        expected = _relationships(ctx.expected_output)
+        found = _relationships(ctx.output)
         if not expected and not found:
             return {
                 "relationship_precision": 1.0,
@@ -370,6 +387,50 @@ class ExtractedWithoutFailing(Evaluator):
         return ctx.output.failure_type is None
 
 
+def _node_counts(case: ReportCase) -> Counts:
+    return detection_counts(_nodes(case.expected_output), _nodes(case.output))
+
+
+def _relationship_counts(case: ReportCase) -> Counts:
+    return detection_counts(
+        _relationships(case.expected_output), _relationships(case.output)
+    )
+
+
+EXTRACTION_HEADLINE = HeadlineDefinition(
+    version="extraction-v1",
+    measures=(
+        SetAgreement(
+            prefix="node",
+            counts=_node_counts,
+            roles={
+                "f1": Role.PRIMARY,
+                "precision": Role.HEADLINE,
+                "recall": Role.HEADLINE,
+            },
+        ),
+        SetAgreement(
+            prefix="relationship",
+            counts=_relationship_counts,
+            roles={
+                "precision": Role.HEADLINE,
+                "recall": Role.HEADLINE,
+                "f1": Role.HEADLINE,
+            },
+        ),
+        # Pooled F1 lets a few large chunks dominate; the per-case means sit
+        # beside it so a chunk weighs once.
+        CaseMean(score="node_f1", role=Role.HEADLINE),
+        CaseMean(score="relationship_f1", role=Role.HEADLINE),
+        CaseMean(score=StayedInsideTheNewsOntology.__name__, role=Role.HEADLINE),
+        CaseMean(score="sub_label_accuracy", role=Role.DIAGNOSTIC),
+        CaseMean(score="node_property_accuracy", role=Role.DIAGNOSTIC),
+        CaseMean(score="claim_property_accuracy", role=Role.DIAGNOSTIC),
+        CaseMean(score="stance_alignment_accuracy", role=Role.DIAGNOSTIC),
+    ),
+)
+
+
 EXTRACTION_TASK = register(
     EvaluationTask(
         name="extraction",
@@ -395,6 +456,7 @@ EXTRACTION_TASK = register(
             "extraction": load_instructions(),
             "stance_alignment_critic": CRITIC_INSTRUCTIONS,
         },
+        headline=EXTRACTION_HEADLINE,
     )
 )
 

@@ -17,6 +17,7 @@ from pydantic_evals.lifecycle import CaseLifecycle
 from knowledge_map.schemas import ModelDeployment
 
 from ..data_set import LabelQuality
+from ..headline import HeadlineDefinition
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,12 @@ class EvaluationTask:
     person's labels as a model's on the day someone registers a gold task
     and forgets. Wrong provenance in a committed report cannot be spotted
     by reading the report.
+    """
+    headline: HeadlineDefinition
+    """The Headline Metrics a completed run records, under their version.
+
+    The run's report evaluator and the version recorded beside the prompt
+    digests both come from this one value, so they cannot disagree.
     """
     metadata_type: type[Any] = dict
     collect: Callable[[], Any] | None = None

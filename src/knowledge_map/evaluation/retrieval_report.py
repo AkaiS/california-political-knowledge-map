@@ -203,48 +203,7 @@ def _corrections(exchanges: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def recompute_case_scores(case: dict[str, Any], config: FusionConfig) -> None:
-    """Use the same evaluator rules for live reports and historical migration."""
-    from .tasks.retrieval import RetrievalExpectation, retrieval_scores
-
-    expected = RetrievalExpectation.model_validate(case["expected_output"])
-    output = case["output"]
-    grain_key = "chunk_id" if expected.grain == "article_chunk" else "source_article_id"
-    sources = output["evidence"].get("sources", []) if output["evidence"] else []
-    context_ids = tuple(
-        p["chunk_id"]
-        if expected.grain == "article_chunk"
-        else s["citation"]["source_article_id"]
-        for s in sources
-        for p in s["passages"]
-    )
-    for branch in output["branches"]:
-        if branch["status"] == "skipped":
-            continue
-        found = tuple(r[grain_key] for r in branch["candidates"])
-        scores = retrieval_scores(
-            found, expected, prefix=branch["branch"], ks=(1, 5, 10, 50)
-        )
-        for k, v in scores.items():
-            case["scores"].setdefault(k, {}).update(value=v.value, reason=v.reason)
-    fused = replay_fusion(output["branches"], config)
-    scores = retrieval_scores(
-        tuple(r[grain_key] for r in fused), expected, prefix="fused", ks=(1, 5, 10, 50)
-    )
-    for k, v in scores.items():
-        case["scores"].setdefault(k, {}).update(value=v.value, reason=v.reason)
-    k = max(1, len(context_ids))
-    scores = retrieval_scores(context_ids, expected, prefix="context", ks=(k,))
-    for metric in ("recall", "complete_evidence"):
-        score = scores[f"context_{metric}_at_{k}"]
-        case["scores"].setdefault(f"context_{metric}", {}).update(
-            value=score.value, reason=score.reason
-        )
-
-
-def compact_retrieval_report(
-    document: dict[str, Any], *, rescore: bool = False
-) -> dict[str, Any]:
+def compact_retrieval_report(document: dict[str, Any]) -> dict[str, Any]:
     """Project the framework report at its existing serialization boundary."""
     if document.get("retrieval_report", {}).get("version") == REPORT_VERSION:
         return document
@@ -300,8 +259,6 @@ def compact_retrieval_report(
             "rendered_text": output.get("rendered_text"),
             "model_corrections": _corrections(output.get("messages", [])),
         }
-        if rescore:
-            recompute_case_scores(case, config)
     document["retrieval_report"] = {
         "version": REPORT_VERSION,
         "metric_version": METRIC_VERSION,

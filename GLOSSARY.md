@@ -361,6 +361,14 @@ _Avoid_: OpenRouter Probe, health check, ping, preflight
 One execution of a selected population from an Evaluation Data Set against one task and one Model Deployment, retaining completed outcomes, failed attempts, and unresolved cases independently of whether execution finishes. Its provenance distinguishes a full set from an explicitly requested subset; interrupted attempts remain inspectable and a new execution is a separate run.
 _Avoid_: Experiment, job, trial, evaluation record
 
+**Headline Metric**:
+One of the fixed, versioned run-level measurements a task records in the Evaluation Report of every Evaluation Run that reaches a result for each selected case. Exactly one is the task's primary metric. Each is computed once, when the run completes, and readers take it from the report rather than re-deriving it from case scores. A change to its definition, aggregation or population rule creates a new headline version.
+_Avoid_: Summary stat, average score, KPI
+
+**Comparable Run**:
+An earlier completed Evaluation Run that holds the measurement fixed: the same task, the same selected Evaluation Case IDs, the same Data Set revision and the same headline version. Everything else is the system under test, including the Model Deployment, prompt versions and code, and changes to it are what a comparison exists to show. A reported change in a Headline Metric is valid only against a Comparable Run.
+_Avoid_: Previous run, reference run, matching run
+
 ## Operational Constraints
 
 **Local llama.cpp null-content patch**:

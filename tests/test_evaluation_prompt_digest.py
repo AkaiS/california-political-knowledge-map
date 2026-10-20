@@ -15,6 +15,7 @@ from knowledge_map.cli import evaluate
 from knowledge_map.evaluation import LabelQuality
 from knowledge_map.evaluation.data_set import EvaluationCase, EvaluationDataSet
 from knowledge_map.evaluation.tasks import EvaluationTask, task_named, task_names
+from knowledge_map.evaluation.tasks.relevance import RELEVANCE_HEADLINE
 
 
 def _task(prompts) -> EvaluationTask:
@@ -26,6 +27,7 @@ def _task(prompts) -> EvaluationTask:
         evaluators=(),
         default_model="fixture/model",
         label_quality=LabelQuality.SILVER,
+        headline=RELEVANCE_HEADLINE,
         prompts=prompts,
     )
 
@@ -88,6 +90,7 @@ def test_the_run_command_carries_the_digests_into_experiment_metadata(
         name="relevance",
         data_set_stem="relevance",
         label_quality=LabelQuality.GOLD,
+        headline=RELEVANCE_HEADLINE,
         input_type=dict,
         output_type=dict,
         metadata_type=dict,

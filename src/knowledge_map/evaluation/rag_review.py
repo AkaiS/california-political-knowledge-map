@@ -7,6 +7,7 @@ from typing import Any
 
 from knowledge_map.schemas.fusion import FusionConfig
 
+from .headline import Aggregation, Headline
 from .retrieval_report import replay_fusion, selected_semantic_results
 
 AXES = ("context_relevance", "answer_relevance", "faithfulness")
@@ -217,6 +218,7 @@ def _metric_rows(
                         "metric": metric,
                         "label": label,
                         "k": k,
+                        "score": name,
                         "value": value,
                         "reason": reason,
                     }
@@ -232,6 +234,7 @@ def _metric_rows(
                 "metric": name,
                 "label": label,
                 "k": None,
+                "score": name,
                 "value": score.get("value"),
                 "reason": score.get("reason")
                 or "Unavailable: this run has no reference scores.",
@@ -324,6 +327,9 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                 },
             }
         )
+    # A run's frozen result is its headline table, wherever the table holds
+    # the measurement the reviewer shows.
+    headline = Headline.from_analyses(document["report"].get("analyses") or [])
     summaries = []
     if cases:
         keys = {
@@ -338,6 +344,22 @@ def project_report(document: dict[str, Any]) -> dict[str, Any]:
                 for row in case["metrics"]
                 if (row["branch"], row["metric"], row["k"]) == (branch, metric, k)
             ]
+            recorded = headline and headline.row(
+                rows[0]["score"], Aggregation.PER_CASE_MEAN
+            )
+            if recorded:
+                summaries.append(
+                    {
+                        **rows[0],
+                        "value": recorded.value,
+                        "reason": recorded.unavailable_reason or rows[0]["reason"],
+                        "scored_cases": recorded.scored_cases,
+                        "applicable_cases": len(rows),
+                    }
+                )
+                continue
+            # Reviewer-only measurements, and every measurement of a report
+            # without a headline table, keep the reviewer's case means.
             values = [row["value"] for row in rows if row["value"] is not None]
             summaries.append(
                 {

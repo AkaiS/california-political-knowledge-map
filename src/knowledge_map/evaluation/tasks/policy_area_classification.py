@@ -25,6 +25,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.reporting import ReportCase
 
 from knowledge_map.adapters.policy_areas import (
     CLASSIFICATION_INSTRUCTIONS,
@@ -36,6 +37,15 @@ from knowledge_map.schemas import ModelDeployment, PolicyAreaName
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
+from ..headline import (
+    CaseMean,
+    Counts,
+    HeadlineDefinition,
+    PerLabel,
+    Role,
+    SetAgreement,
+    detection_counts,
+)
 from ..scoring import detection_scores
 from .registry import EvaluationTask, register
 
@@ -129,6 +139,12 @@ def build_task(model: str | ModelDeployment, data_set: Any) -> Any:
     return classify
 
 
+def _areas(answer: ClassificationExpectation | ClassificationOutput) -> set[str]:
+    """One side's Policy Areas as a set: an area named twice is one topic edge."""
+
+    return set(answer.policy_areas)
+
+
 class AgreedOnThePolicyAreas(Evaluator):
     """The same Policy Areas were chosen, by canonical name.
 
@@ -146,8 +162,8 @@ class AgreedOnThePolicyAreas(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = set(ctx.expected_output.policy_areas)
-        found = set(ctx.output.policy_areas)
+        expected = _areas(ctx.expected_output)
+        found = _areas(ctx.output)
         if not expected and not found:
             return {
                 "policy_area_precision": 1.0,
@@ -168,6 +184,47 @@ class ClassifiedWithoutFailing(Evaluator):
         return ctx.output.failure_type is None
 
 
+def _area_counts(case: ReportCase) -> Counts:
+    return detection_counts(_areas(case.expected_output), _areas(case.output))
+
+
+def _areas_of_reference(case: ReportCase) -> set[str]:
+    return _areas(case.expected_output)
+
+
+def _counts_by_area(case: ReportCase) -> dict[str, Counts]:
+    expected = _areas(case.expected_output)
+    found = _areas(case.output)
+    return {
+        area: detection_counts(expected & {area}, found & {area})
+        for area in expected | found
+    }
+
+
+POLICY_AREA_CLASSIFICATION_HEADLINE = HeadlineDefinition(
+    version="policy_area_classification-v1",
+    measures=(
+        SetAgreement(
+            prefix="policy_area",
+            counts=_area_counts,
+            roles={
+                "f1": Role.PRIMARY,
+                "precision": Role.HEADLINE,
+                "recall": Role.HEADLINE,
+            },
+        ),
+        # Pooled F1 is carried by the common areas; the label-macro F1 weighs
+        # each area silver used once, so a rare area missed every time shows.
+        PerLabel(
+            prefix="policy_area",
+            counts=_counts_by_area,
+            reference_labels=_areas_of_reference,
+        ),
+        CaseMean(score="policy_area_f1", role=Role.HEADLINE),
+    ),
+)
+
+
 POLICY_AREA_CLASSIFICATION_TASK = register(
     EvaluationTask(
         name="policy_area_classification",
@@ -183,5 +240,6 @@ POLICY_AREA_CLASSIFICATION_TASK = register(
         default_model=default_model(),
         prompts=lambda: {"classification": CLASSIFICATION_INSTRUCTIONS},
         collect=None,
+        headline=POLICY_AREA_CLASSIFICATION_HEADLINE,
     )
 )

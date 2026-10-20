@@ -25,6 +25,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.reporting import ReportCase
 
 from knowledge_map.adapters.policy_areas import (
     ASSIGNMENT_INSTRUCTIONS,
@@ -43,6 +44,14 @@ from knowledge_map.schemas import (
 
 from ..data_set import LabelQuality
 from ..deployment import as_deployment, default_model
+from ..headline import (
+    CaseMean,
+    Counts,
+    HeadlineDefinition,
+    Role,
+    SetAgreement,
+    detection_counts,
+)
 from ..scoring import detection_scores
 from .extraction import normalize_name
 from .registry import EvaluationTask, register
@@ -228,6 +237,10 @@ def _identity(assignment: TopicAssignment | SilverTopicAssignment) -> PairIdenti
     )
 
 
+def _pairs(answer: AssignmentExpectation | AssignmentOutput) -> set[PairIdentity]:
+    return {_identity(pair) for pair in answer.assignments}
+
+
 class AgreedOnTheTopicAssignments(Evaluator):
     """The same measures were connected to the same Policy Areas.
 
@@ -247,8 +260,8 @@ class AgreedOnTheTopicAssignments(Evaluator):
     """
 
     def evaluate(self, ctx: EvaluatorContext) -> Mapping[str, float]:
-        expected = {_identity(pair) for pair in ctx.expected_output.assignments}
-        found = {_identity(pair) for pair in ctx.output.assignments}
+        expected = _pairs(ctx.expected_output)
+        found = _pairs(ctx.output)
         if not expected and not found:
             return {
                 "assignment_precision": 1.0,
@@ -269,6 +282,29 @@ class AssignedWithoutFailing(Evaluator):
         return ctx.output.failure_type is None
 
 
+def _pair_counts(case: ReportCase) -> Counts:
+    return detection_counts(_pairs(case.expected_output), _pairs(case.output))
+
+
+TOPIC_ASSIGNMENT_HEADLINE = HeadlineDefinition(
+    version="topic_assignment-v1",
+    measures=(
+        SetAgreement(
+            prefix="assignment",
+            counts=_pair_counts,
+            roles={
+                "f1": Role.PRIMARY,
+                "precision": Role.HEADLINE,
+                "recall": Role.HEADLINE,
+            },
+        ),
+        # Pooled F1 lets an article with many measures dominate; the per-case
+        # mean sits beside it so an article weighs once.
+        CaseMean(score="assignment_f1", role=Role.HEADLINE),
+    ),
+)
+
+
 TOPIC_ASSIGNMENT_TASK = register(
     EvaluationTask(
         name="topic_assignment",
@@ -284,5 +320,6 @@ TOPIC_ASSIGNMENT_TASK = register(
         default_model=default_model(),
         prompts=lambda: {"assignment": ASSIGNMENT_INSTRUCTIONS},
         collect=None,
+        headline=TOPIC_ASSIGNMENT_HEADLINE,
     )
 )
