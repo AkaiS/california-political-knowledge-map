@@ -27,7 +27,7 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           # Install a specific version of uv.
-          version: "0.12.21"
+          version: "0.13.5"
       - run: uv python install
       - run: uv sync --locked --dev
       - name: Test review editing
@@ -54,7 +54,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.12.21"
+          version: "0.13.5"
       - name: Check PR review policy and resolved feedback
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,7 +76,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.12.21"
+          version: "0.13.5"
       - name: Compare image sources with the previous main commit
         id: compare
         env:
@@ -118,7 +118,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.12.21"
+          version: "0.13.5"
       - name: Install pinned Bottle CLI
         run: |
           uv tool install --python 3.13.5 'cloud-in-a-bottle-cli @ git+https://github.com/cloud-in-a-bottle/cloud-in-a-bottle.git@6ea27634d1cbfc1b29caec29b53b76d919201b97#subdirectory=compute_space_cli'
@@ -150,7 +150,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          version: "0.12.21"
+          version: "0.13.5"
       - name: Install pinned Bottle CLI
         run: |
           uv tool install --python 3.13.5 'cloud-in-a-bottle-cli @ git+https://github.com/cloud-in-a-bottle/cloud-in-a-bottle.git@6ea27634d1cbfc1b29caec29b53b76d919201b97#subdirectory=compute_space_cli'

@@ -24,7 +24,7 @@ publication prerequisite in this phase; recovery readiness is not established.
 The manifest reserves 5 GiB and three CPUs for the app, and 2 GiB for builds.
 Compile concurrency is one. The runtime includes Neo4j Community 2026.07.1,
 Temurin 25.0.3 Java, llama.cpp `dee2a846b82f15d27f84a48fa387cb53e0d99c25`,
-Python 3.13.5, uv 0.12.21 and supervisord 4.3.0. Base images use immutable
+Python 3.13.5, uv 0.13.5 and supervisord 4.3.0. Base images use immutable
 digests. The upstream llama.cpp embedded server UI fetch still uses an unpinned
 asset URL; its server is loopback-only. Embeddings use the fixed GGUF with one
 request at a time and two CPU threads.
