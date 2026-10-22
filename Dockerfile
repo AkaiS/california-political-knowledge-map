@@ -1,5 +1,5 @@
 # Official Community distribution pins Neo4j and its compatible Java runtime.
-FROM ghcr.io/astral-sh/uv:0.12.21@sha256:a7aed3216253ee804de3e2d8afa5073baa1a177335345d43845cd4165e43b711 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 FROM neo4j:2026.07.1@sha256:dca31d0d938dd8bb199c8846abedd897c3a07ddb629eca46a8009ac9e87aece2 AS llama-build
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends git cmake make gcc g++ ca-certificates && rm -rf /var/lib/apt/lists/*
